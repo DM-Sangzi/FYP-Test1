@@ -13,8 +13,10 @@
 | WebView2 Runtime | 155.0.4283.62 | pywebview 需要；已內建 |
 | git | 2.45.1.windows.1 | |
 
-**native liboqs：未配置（B 模式）**。ML-KEM／ML-DSA 檢查因此如實顯示
-「受阻」。安裝方案（選項 A）見 `implementation-status.md`，需另行批准。
+**native liboqs：已配置（選項 A 已實施，2026-10-26）**。liboqs 0.16.0
+（官方 release 原始碼自行編譯）安裝於 `desktop/native/bin/oqs.dll`；
+`pqpm_client` 套件 import 時會自動把未設定的 `OQS_INSTALL_PATH` 指向該
+目錄，不需手動環境變數。ML-KEM-768／ML-DSA-65 為真實執行。
 
 ## 2. 安裝步驟（專案根目錄，PowerShell）
 
@@ -70,13 +72,33 @@ npm run dev    # http://localhost:5173
 - 原有 Register→Login→Chat mock 流程不受影響。
 - 開 `/dev/crypto?diagnostics=1` 會顯示「bridge 不可用」並停用測試按鈕。
 
-## 6. 選項 A（native liboqs）實施時的配置方式（待批准，現階段勿執行）
+## 6. 選項 A 實施記錄（已完成，2026-10-26）
 
-1. 以 VS Build Tools + CMake 從官方 liboqs release 原始碼編譯 `oqs.dll`。
-2. 放置於專案 `desktop/native/bin/oqs.dll`。
-3. 啟動前設定環境變數 `OQS_INSTALL_PATH=<專案>\desktop\native`
-   （liboqs-python 的偵測邏輯會找 `<OQS_INSTALL_PATH>\bin\oqs.dll`）。
-4. 重跑 `--check-tools`：ML-KEM-768／ML-DSA-65 應變為實際執行（passed/failed）。
+實際執行的步驟與版本（可重現）：
+
+1. **VS 2022 Build Tools**（官網 `aka.ms/vs/17/release/vs_BuildTools.exe`）：
+   `--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools
+   --includeRecommended --add Microsoft.VisualStudio.Component.VC.CMake.Project`
+   → MSVC 14.44.35207＋Windows SDK＋VS 內建 CMake（安裝約數 GB，需 UAC）。
+2. **liboqs 0.16.0 原始碼**：GitHub 官方 release tarball
+   `https://github.com/open-quantum-safe/liboqs/archive/refs/tags/0.16.0.tar.gz`
+   （與 liboqs-python 0.16.0.1 版本對應）。
+3. **CMake 組態／編譯／安裝**：
+   `cmake -S <src> -B <build> -G "Visual Studio 17 2022" -A x64
+   -DBUILD_SHARED_LIBS=ON -DOQS_BUILD_ONLY_LIB=ON
+   -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE
+   -DCMAKE_INSTALL_PREFIX=<專案>/desktop/native`
+   → `cmake --build <build> --config Release --parallel 8`
+   → `cmake --build <build> --config Release --target install`
+   → 產物 `desktop/native/bin/oqs.dll`（未啟用任何 stateful／hazardous 選項；
+   ML-KEM／ML-DSA 為預設啟用）。
+4. **接線**：`desktop/pqpm_client/__init__.py` 在 `desktop/native/` 存在且
+   使用者未自設 `OQS_INSTALL_PATH` 時自動指向該路徑（不安裝、不下載、
+   不編譯任何東西）。
+5. 驗證：`--check-tools` 整體「通過」、exit 0；GUI 兩次執行指紋改變。
+
+如需在其他機器重建：依本節步驟即可；`desktop/native/` 已被 gitignore，
+新機器需重複編譯或以安全方式傳遞 dll。
 
 ## 7. 常見問題
 

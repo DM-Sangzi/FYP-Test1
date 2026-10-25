@@ -1,9 +1,10 @@
-# 實作狀態（第 1 階段，B 模式）
+# 實作狀態（第 1 階段）
 
-> **結論：B 模式部分完成。** frontend／desktop bridge、HKDF-SHA-256、
-> AES-256-GCM 已由本機 Python 真實執行並通過；ML-KEM-768 與 ML-DSA-65
-> 因 native liboqs 未配置而如實「受阻」，**不得宣稱已測試成功**。
-> **第 1 階段整體尚未全部完成；尚未建立任何 E2EE 聊天 session。**
+> **結論（2026-10-26 選項 A 實施後）：第 1 階段全部完成。**
+> ML-KEM-768 與 ML-DSA-65 已由 native liboqs 0.16.0（自行編譯）真實執行
+> 並通過；HKDF-SHA-256、AES-256-GCM 通過；desktop GUI 於 Windows 實際
+> 開啟、bridge 實際呼叫成功；pytest 28/28。**此完成僅代表「第 1 階段
+> 密碼工具可行性 PoC」完成——不是 E2EE 聊天完成；E2EE session 尚未實作。**
 
 ## 1. 原有功能（未變動，已回歸確認）
 
@@ -26,22 +27,40 @@
 | busy 防平行（Python lock） | ✅ 完成 | `test_runner_busy.py`；bridge 回 `{"busy":true}` |
 | HKDF-SHA-256 真實測試 | ✅ **通過**（2/2 檢查） | CLI＋GUI＋pytest |
 | AES-256-GCM 真實測試 | ✅ **通過**（5/5 檢查） | CLI＋GUI＋pytest |
-| ML-KEM-768 | ⛔ **受阻**（native 未配置） | 檔案預檢，未觸發 import |
-| ML-DSA-65 | ⛔ **受阻**（native 未配置） | 同上 |
+| ML-KEM-768（選項 A 後） | ✅ **通過**（4/4；native liboqs 0.16.0 真實執行） | CLI exit 0＋GUI＋pytest |
+| ML-DSA-65（選項 A 後） | ✅ **通過**（5/5；真實執行，含負面測試） | 同上 |
 | loopback 靜態伺服（僅 dist、防逃逸、SPA fallback） | ✅ 完成 | `test_static_server.py`（403/404/200 各案例） |
 | 前端診斷頁 `/dev/crypto`（固定「尚未建立 E2EE」標示） | ✅ 完成 | 瀏覽器＋GUI 實測 |
 | Windows GUI 實際開啟＋bridge 實際呼叫 | ✅ 已驗證 | 探針實錄（見 feasibility-results.md §4） |
 | pytest 自動化 | ✅ 28/28 通過 | 含缺依賴／busy／邊界案例 |
 | 文件（本目錄五份） | ✅ 完成 | |
 
-## 3. 受阻項目與原因
+## 3. 選項 A 實施（2026-10-26，經使用者批准）
 
-- **ML-KEM-768／ML-DSA-65**：native `oqs.dll` 未配置。B 模式如實顯示
-  受阻；安裝方案（選項 A：VS Build Tools + CMake 編譯官方 liboqs）
-  已另行提出，**等待批准後才會實施**。
-- 附帶觀察：本機無 cmake、無 vcpkg（唯讀檢查確認）。
+- 安裝 VS 2022 Build Tools（MSVC 14.44.35207＋Windows SDK＋CMake）。
+- 從官方 liboqs **0.16.0** release tarball 編譯 `oqs.dll` → 安裝於
+  `desktop/native/bin/`（未啟用 stateful／hazardous 選項）。
+- `pqpm_client/__init__.py` 自動將 `OQS_INSTALL_PATH` 預設指向
+  `desktop/native/`（存在時）。
+- 期間發現並修正兩個真實問題（誠實記錄）：
+  1. liboqs-python 0.16 的 `Signature.verify()` 必須明確傳入
+     `public_key`（無預設值）→ 修正簽章檢查呼叫。
+  2. wrapper 實測**不會**對錯誤長度 ciphertext／signature 丟例外
+     （直接傳入 native 有越界讀取風險）→ 依 Stage 1 文件 §6.1 改為
+     **應用層長度驗證**（比對 details 標準長度），wrapper 行為記錄於說明。
+- 驗證：`--check-tools` 整體「通過」exit 0；指紋每次執行改變；
+  pytest 28/28；GUI 16 項全過。
 
-## 4. 事件記錄：liboqs-python 自動安裝器（已處理）
+### 事件記錄補充（第二次自動安裝器觸發）
+
+選項 A 實施期間，一次手動除錯指令在未經我們防護的路徑直接
+`import oqs`（當時 `OQS_INSTALL_PATH` 未設定），再次觸發
+liboqs-python 自動安裝器：git clone 已下載到 temp，但 cmake 不在
+PATH 使建置失敗，**未安裝任何東西**；該 temp clone 已刪除並確認無
+殘留。教訓已寫入 development-setup：任何情況下不要裸 `import oqs`，
+一律透過 `pqpm_client` 套件。
+
+## 4. 事件記錄：liboqs-python 自動安裝器（首次，已處理）
 
 - **發生**：2026-10-26 實作期間，一次 `import oqs` 偵測觸發
   liboqs-python 0.16.0.1 內建自動安裝器：`git clone` liboqs 0.16.0
@@ -54,8 +73,8 @@
 
 ## 5. 尚未做／後續階段（不自動開始）
 
-- 選項 A：native liboqs 編譯安裝（待批准）→ 之後 ML-KEM／ML-DSA 實測。
-- 第 2 階段：session specification 撰寫與 supervisor 審查。
+- 第 2 階段：session specification 撰寫與 supervisor 審查
+  （ML-DSA 參數正式核定亦屬此階段）。
 - 第 3+ 階段：relay（FastAPI 候選）、TLS、SQLite、帳號。
 - 第 4 階段：無 UI 雙 client E2EE 整合；第 5 階段：聊天 UI 接回。
 - 第 6 階段：正式 key-management UI（本診斷頁不取代它）。

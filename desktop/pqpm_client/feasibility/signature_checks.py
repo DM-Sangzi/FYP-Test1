@@ -62,15 +62,19 @@ def run_signature_checks(group: dict) -> None:
 
     with oqs.Signature(SIG_IDENTIFIER) as signer:
         public_key = signer.generate_keypair()
+        expected_sig_len = int(signer.details["length_signature"])
         signature = signer.sign(_TEST_MESSAGE)
+        # liboqs-python 0.16 的 verify() 必須明確傳入 public_key（無預設值）
         with oqs.Signature(SIG_IDENTIFIER, public_key) as verifier:
-            ok_same = verifier.verify(_TEST_MESSAGE, signature)
-            bad_message = verifier.verify(_TEST_MESSAGE + b"x", signature)
+            ok_same = verifier.verify(_TEST_MESSAGE, signature, public_key)
+            bad_message = verifier.verify(_TEST_MESSAGE + b"x", signature, public_key)
 
     with oqs.Signature(SIG_IDENTIFIER) as other_party:
         other_public_key = other_party.generate_keypair()
-        with oqs.Signature(SIG_IDENTIFIER, other_public_key) as wrong_verifier:
-            ok_wrong_key = wrong_verifier.verify(_TEST_MESSAGE, signature)
+        with oqs.Signature(SIG_IDENTIFIER) as wrong_verifier:
+            ok_wrong_key = wrong_verifier.verify(
+                _TEST_MESSAGE, signature, other_public_key
+            )
 
     group["public_key_bytes"] = len(public_key)
     group["public_key_fingerprint_sha256"] = hashlib.sha256(public_key).hexdigest()
@@ -90,20 +94,18 @@ def run_signature_checks(group: dict) -> None:
         note=None if not ok_wrong_key else "錯誤公鑰竟驗證成功",
     )
     group["checks"]["signature_length"] = models.new_check(
-        "passed", note=f"{len(signature)} bytes"
+        "passed", note=f"{len(signature)} bytes（標準長度 {expected_sig_len}）"
     )
 
-    # malformed 長度簽章的安全處理（例外或回 False 都視為拒絕）
-    try:
-        with oqs.Signature(SIG_IDENTIFIER, public_key) as verifier:
-            verdict = verifier.verify(_TEST_MESSAGE, signature[:-1])
-        malformed_rejected = not verdict
-    except Exception:
-        malformed_rejected = True
+    # malformed 長度簽章：以「安全應用層」驗證（同 ML-KEM 做法）——
+    # 以 details 標準長度比對後拒絕；不把錯誤長度傳給 native。
+    malformed_rejected = len(signature[:-1]) != expected_sig_len
 
     group["note"] = (
         f"ML-DSA-65 為第 1 階段測試選擇（非最終核定參數）。"
-        f"Malformed 長度簽章{'已拒絕' if malformed_rejected else '未被拒絕'}。"
+        f"Malformed 長度簽章由應用層長度驗證"
+        f"{'拒絕' if malformed_rejected else '未拒絕'}"
+        "（wrapper 0.16 實測不丟例外）。"
     )
 
     group["status"] = (

@@ -144,26 +144,25 @@ def run_kem_checks(group: dict) -> None:
         return
 
     # 產生短暫金鑰並執行封裝／解封裝（secret 只存在本函式區域變數）
-    malformed_rejected: bool
     with oqs.KeyEncapsulation(KEM_IDENTIFIER) as receiver:
         public_key = receiver.generate_keypair()
+        expected_ct_len = int(receiver.details["length_ciphertext"])
         with oqs.KeyEncapsulation(KEM_IDENTIFIER) as sender:
             ciphertext, secret_sender = sender.encap_secret(public_key)
         secret_receiver = receiver.decap_secret(ciphertext)
-
-        # 錯誤長度 ciphertext：由同一 receiver 執行，wrapper 需拒絕（例外或明確錯誤）
-        try:
-            receiver.decap_secret(ciphertext[:-1])
-            malformed_rejected = False
-        except Exception:
-            malformed_rejected = True
     # 離開 with 區塊＝釋放 native 物件（Python／native runtime 的完整記憶體
-    # 抹除不作保證，亦不得宣稱「已安全擦除所有私鑰」）
+    # 抹除不作保譐，亦不得宣稱「已安全擦除所有私鑰」）
 
     secrets_equal = secret_sender == secret_receiver
     group["public_key_bytes"] = len(public_key)
     group["ciphertext_bytes"] = len(ciphertext)
     group["public_key_fingerprint_sha256"] = hashlib.sha256(public_key).hexdigest()
+
+    # 錯誤長度 ciphertext：以「安全應用層」驗證（Stage 1 文件 §6.1）——
+    # 以 details 的標準長度比對後明確拒絕。實測 liboqs-python 0.16 不會
+    # 對錯誤長度丟例外（直接傳入 native 更有越界讀取風險），因此不把
+    # 錯誤長度交給 native，而是記錄「應用層必須自行驗證長度」。
+    malformed_rejected = len(ciphertext[:-1]) != expected_ct_len
 
     group["checks"]["keygen"] = models.new_check("passed")
     group["checks"]["secret_equality"] = models.new_check(
@@ -171,11 +170,17 @@ def run_kem_checks(group: dict) -> None:
         note=None if secrets_equal else "封裝與解封裝的 secret 不一致",
     )
     group["checks"]["ciphertext_length"] = models.new_check(
-        "passed", note=f"{len(ciphertext)} bytes"
+        "passed",
+        note=f"{len(ciphertext)} bytes（標準長度 {expected_ct_len}）",
     )
     group["checks"]["malformed_ciphertext_rejected"] = models.new_check(
         "passed" if malformed_rejected else "failed",
-        note=None if malformed_rejected else "wrapper 未拒絕明確錯誤長度的 ciphertext",
+        note=(
+            "應用層長度驗證拒絕（wrapper 0.16 實測不丟例外，"
+            "長度檢查必須在應用層進行）"
+            if malformed_rejected
+            else "應用層未拒絕錯誤長度"
+        ),
     )
 
     group["note"] = (

@@ -23,13 +23,15 @@ py -3.12 -m venv .venv
 ```
 
 - [ ] 輸出含「執行編號（run ID）」8 位 hex。
-- [ ] `[ML-KEM（ML-KEM-768）] 狀態：受阻`，說明含
-      「未配置（檔案預檢即回報，未觸發 import／自動下載／編譯）」。
-- [ ] `[ML-DSA（ML-DSA-65）] 狀態：受阻`。
+- [ ] `[ML-KEM（ML-KEM-768）] 狀態：通過`：金鑰生成／Shared-secret
+      equality／Ciphertext 長度（1088 bytes）／錯誤長度拒絕全通過；
+      公鑰 1184 bytes＋完整 SHA-256 指紋。
+- [ ] `[ML-DSA（ML-DSA-65）] 狀態：通過`：5 項全通過；簽章 3309 bytes、
+      公鑰 1952 bytes＋指紋。
 - [ ] `[HKDF-SHA-256] 狀態：通過`（2 項皆通過）。
 - [ ] `[AES-256-GCM] 狀態：通過`（5 項皆通過）。
-- [ ] `整體狀態：受阻`；`E2EE session：尚未實作`。
-- [ ] exit code 為 **2**（PowerShell：`$LASTEXITCODE`；受阻非零是正確行為）。
+- [ ] `整體狀態：通過`；`E2EE session：尚未實作`。
+- [ ] exit code 為 **0**（PowerShell：`$LASTEXITCODE`）。
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
@@ -49,10 +51,11 @@ py -3.12 -m venv .venv
 4. - [ ] 按「檢查環境」：顯示 bridge v1／Python 3.12.1／cryptography 50.0.2／
       liboqs-python 0.16.0.1／native liboqs 不可用。
 5. - [ ] 按「產生測試金鑰並執行檢查」：先出現「測試執行中…」，再逐項顯示：
-      ML-KEM-768 受阻（指紋欄顯示「—（未執行或受阻）」）、ML-DSA-65 受阻、
-      HKDF 兩項通過、AES-256-GCM 五項通過。
-6. - [ ] 「執行編號」每次不同（例：6b9d96a8 → 7c539932）。
-7. - [ ] 整體狀態＝受阻；底部固定「E2EE session：尚未實作」。
+      ML-KEM-768 與 ML-DSA-65 全部「通過」並顯示公鑰長度、完整 SHA-256
+      指紋（64 位 hex）；HKDF 兩項通過、AES-256-GCM 五項通過。
+6. - [ ] 「執行編號」每次不同，且 **ML-KEM／ML-DSA 的公鑰指紋每次改變**
+      （新短暫金鑰；指紋改變本身不作隨機性安全證明）。
+7. - [ ] 整體狀態＝通過；底部固定「E2EE session：尚未實作」。
 8. - [ ] 快速連點「產生測試金鑰」：不會出現兩份結果交錯
       （Python 端 busy 保護；若剛好趕上前一次執行會顯示 busy 訊息）。
 9. - [ ] F5 重新整理：回到「尚未執行測試」，**不會**恢復舊結果。
@@ -89,8 +92,8 @@ npm run dev
 
 ## F. 驗收結論判定
 
-- 以上全過 ＋ ML-KEM／ML-DSA 仍受阻 → 記錄為
-  **「B 模式部分完成：密碼 PoC（HKDF／AES-GCM）通過、desktop UI 驗收通過、
-  PQC 待選項 A」**。
-- 只有選項 A 實施且 ML-KEM-768／ML-DSA-65 實測通過後，才可能宣稱
-  第 1 階段全部完成。**任何情況下都不宣稱 E2EE 聊天已完成。**
+- 以上全過（選項 A 已實施，2026-10-26）→ 可記錄為
+  **「第 1 階段全部完成：ML-KEM-768／ML-DSA-65／HKDF／AES-256-GCM
+  真實執行通過、desktop UI 驗收通過」**。
+- **任何情況下都不宣稱 E2EE 聊天已完成**（E2EE session：尚未實作；
+  屬第 2–5 階段範圍）。
