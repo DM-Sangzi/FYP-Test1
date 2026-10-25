@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#0E7490"/>
+  <path d="M32 12c-8.8 0-16 6.3-16 14.1 0 4.5 2.4 8.5 6.2 11.2V46l6.4-3.5c1.1.2 2.2.3 3.4.3 8.8 0 16-6.3 16-14.1S40.8 12 32 12z" fill="#fff" opacity="0.95"/>
+  <rect x="20" y="40" width="24" height="10" rx="3" fill="#22D3EE"/>
+  <text x="32" y="48" font-family="Inter, sans-serif" font-size="9" font-weight="700" fill="#0E7490" text-anchor="middle">PQ</text>
+</svg>

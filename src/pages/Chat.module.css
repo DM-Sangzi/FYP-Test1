@@ -1,0 +1,81 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.sidebarPane {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chatPane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--color-bg);
+}
+
+/* ---------------- Empty state ---------------- */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  text-align: center;
+}
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-surface-3);
+  color: var(--color-accent);
+  margin-bottom: var(--space-2);
+}
+.emptyTitle {
+  font-size: var(--fs-h3);
+}
+.emptyText {
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+  max-width: 320px;
+}
+
+/* ---------------- Responsive (PRD §6.3) ---------------- */
+
+/* Tablet: narrower sidebar */
+@media (max-width: 1023px) {
+  .shell {
+    grid-template-columns: 300px 1fr;
+  }
+}
+
+/* Mobile / small tablet: show one pane at a time */
+@media (max-width: 767px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+  /* Default: show the conversation list */
+  .sidebarPane {
+    display: block;
+  }
+  .chatPane {
+    display: none;
+  }
+  /* When a conversation is open, flip the panes */
+  .shell[data-pane='thread'] .sidebarPane {
+    display: none;
+  }
+  .shell[data-pane='thread'] .chatPane {
+    display: flex;
+  }
+}

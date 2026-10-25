@@ -1,0 +1,233 @@
+/* =========================================================================
+   PQPM — Global styles & design tokens
+   Tokens (colours, radii, typography) follow PRD §8.1 & §8.2 exactly.
+   ========================================================================= */
+
+/* ---- Light theme (default) ---- */
+:root {
+  /* Surfaces & text */
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #fafafa; /* slightly darker neutral surface (sidebar) */
+  --color-surface-3: #f0f1f3; /* hover/active surfaces */
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+
+  /* Brand */
+  --color-accent: #0e7490; /* teal */
+  --color-accent-hover: #0b6177;
+  --color-accent-soft: #cffafe;
+  --color-on-accent: #ffffff;
+
+  /* Text */
+  --color-text: #1a1a1a;
+  --color-text-secondary: #374151;
+  --color-muted: #6b7280;
+
+  /* Chat bubbles */
+  --color-bubble-sent: #dbeafe;
+  --color-bubble-sent-text: #1e3a5f;
+  --color-bubble-received: #f3f4f6;
+  --color-bubble-received-text: #1a1a1a;
+
+  /* Avatar tints */
+  --avatar-teal: #0e7490;
+  --avatar-slate: #475569;
+  --avatar-violet: #6d28d9;
+  --avatar-amber: #b45309;
+  --avatar-rose: #be123c;
+  --avatar-emerald: #047857;
+
+  /* Status */
+  --color-online: #16a34a;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fee2e2;
+
+  /* Radii */
+  --radius-card: 12px;
+  --radius-input: 8px;
+  --radius-bubble: 16px;
+  --radius-button: 8px;
+  --radius-pill: 999px;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fs-body: 16px;
+  --fs-small: 14px;
+  --fs-xs: 12px;
+  --fs-h1: 36px;
+  --fs-h2: 24px;
+  --fs-h3: 20px;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  --header-height: 56px;
+  --sidebar-width: 340px;
+  --content-max: 1120px;
+}
+
+/* ---- Dark theme ---- */
+[data-theme='dark'] {
+  --color-bg: #111827;
+  --color-surface: #1f2937;
+  --color-surface-2: #1a2332;
+  --color-surface-3: #283548;
+  --color-border: #374151;
+  --color-border-strong: #4b5563;
+
+  --color-accent: #22d3ee;
+  --color-accent-hover: #06b6d4;
+  --color-accent-soft: #155e63;
+  --color-on-accent: #062a33;
+
+  --color-text: #f9fafb;
+  --color-text-secondary: #e5e7eb;
+  --color-muted: #9ca3af;
+
+  --color-bubble-sent: #1e3a5f;
+  --color-bubble-sent-text: #dbeafe;
+  --color-bubble-received: #374151;
+  --color-bubble-received-text: #f9fafb;
+
+  --avatar-teal: #22d3ee;
+  --avatar-slate: #94a3b8;
+  --avatar-violet: #a78bfa;
+  --avatar-amber: #fbbf24;
+  --avatar-rose: #fb7185;
+  --avatar-emerald: #34d399;
+
+  --color-online: #4ade80;
+  --color-danger: #f87171;
+  --color-danger-soft: #3f1d1d;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+
+/* ---- Reset ---- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--fs-body);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font-family: inherit;
+  font-size: var(--fs-body);
+}
+
+ul {
+  list-style: none;
+}
+
+/* ---- Accessibility: visible focus on all interactive elements ---- */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip link for keyboard users */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Screen-reader-only link that becomes visible on focus */
+.skip-link {
+  position: absolute;
+  left: 50%;
+  top: -100px;
+  transform: translateX(-50%);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-button);
+  z-index: 1000;
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: var(--space-3);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

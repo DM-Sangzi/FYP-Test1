@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pqpm-client"
+version = "0.1.0"
+description = "PQPM Stage 1 本機 desktop client core：僅限密碼工具可行性診斷（非 E2EE 聊天）"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # HKDF-SHA-256 與 AES-256-GCM（正式 wheel，無需 native 編譯）
+    "cryptography>=42",
+    # liboqs 官方 Python wrapper（純 ctypes 綁定；不會自動下載或編譯 native library）
+    "liboqs-python>=0.10",
+    # Windows desktop shell（僅 --diagnostics 模式才 import）
+    "pywebview>=5.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+
+[tool.setuptools.packages.find]
+where = ["desktop"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

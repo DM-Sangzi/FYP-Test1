@@ -1,0 +1,416 @@
+/* 第 1 階段診斷頁 — 沿用全域 design tokens（index.css），不改版其他頁面 */
+
+.page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding: var(--space-6) var(--space-4) var(--space-10);
+}
+
+.container {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.backLink {
+  font-size: var(--fs-small);
+  color: var(--color-accent);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-h2);
+  color: var(--color-text);
+}
+
+.fixedNotice {
+  background: var(--color-accent-soft);
+  border-left: 4px solid var(--color-accent);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-input);
+  color: var(--color-text);
+  font-size: var(--fs-body);
+}
+
+.fixedNotice strong {
+  font-weight: 600;
+}
+
+.fixedNoticeMuted {
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+}
+
+.sourceStrip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.sourceOk {
+  border-color: var(--color-online);
+}
+
+.sourceBad {
+  border-color: var(--color-border-strong);
+}
+
+.sourceLabel {
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.sourceSub {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+}
+
+.warnBanner {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  background: var(--color-danger-soft);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+}
+
+.warnBanner svg {
+  color: var(--color-danger);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.warnTitle {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: var(--fs-small);
+}
+
+.warnText {
+  color: var(--color-text-secondary);
+  font-size: var(--fs-small);
+  margin-top: var(--space-1);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.btnPrimary,
+.btnSecondary,
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-button);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btnPrimary {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.btnSecondary {
+  background: var(--color-surface);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.btnSecondary:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+
+.btnGhost {
+  background: transparent;
+  color: var(--color-muted);
+  border-color: var(--color-border-strong);
+}
+
+.btnGhost:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.btnPrimary:disabled,
+.btnSecondary:disabled,
+.btnGhost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.spin {
+  animation: pqpmSpin 1s linear infinite;
+}
+
+@keyframes pqpmSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+
+.runningBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-input);
+  background: var(--color-surface-3);
+  color: var(--color-text);
+  font-size: var(--fs-small);
+}
+
+.notice {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-input);
+  background: var(--color-surface-3);
+  color: var(--color-text-secondary);
+  font-size: var(--fs-small);
+}
+
+.errorText {
+  color: var(--color-danger);
+  font-size: var(--fs-small);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-danger-soft);
+  border-radius: var(--radius-input);
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.cardTitle {
+  font-size: var(--fs-h3);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.algo {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-3);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-muted);
+  background: var(--color-surface-2);
+  white-space: nowrap;
+}
+
+.badgePassed {
+  color: var(--color-online);
+  border-color: var(--color-online);
+}
+
+.badgeFailed {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.badgeBlocked {
+  color: var(--avatar-amber);
+  border-color: var(--avatar-amber);
+}
+
+.badgeRunning {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.badgeIdle {
+  color: var(--color-muted);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--color-surface-2);
+  border-radius: var(--radius-input);
+  padding: var(--space-4);
+}
+
+.metaRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metaLabel {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+}
+
+.metaValue {
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  word-break: break-word;
+}
+
+.fingerprint {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: 0.02em;
+}
+
+.checks {
+  display: flex;
+  flex-direction: column;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.checkRow:last-child {
+  border-bottom: none;
+}
+
+.checkName {
+  font-size: var(--fs-small);
+  color: var(--color-text-secondary);
+}
+
+.checkRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.checkNote {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+}
+
+.groupNote {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+  border-left: 3px solid var(--color-border-strong);
+  padding-left: var(--space-3);
+}
+
+.overallBar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.overallRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
+}
+
+.overallLabel {
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.overallLabel code {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  background: var(--color-surface-3);
+  padding: 1px var(--space-2);
+  border-radius: 4px;
+}
+
+.overallNote {
+  font-size: var(--fs-small);
+  color: var(--color-text-secondary);
+}
+
+.e2eeLine {
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  background: var(--color-surface-3);
+  border-radius: var(--radius-input);
+  padding: var(--space-3) var(--space-4);
+}
+
+.idleText {
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.footer {
+  color: var(--color-muted);
+  font-size: var(--fs-xs);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-4);
+}

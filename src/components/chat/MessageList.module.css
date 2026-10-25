@@ -1,0 +1,24 @@
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--color-bg);
+  padding: var(--space-4) var(--space-5);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 200px;
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+}
