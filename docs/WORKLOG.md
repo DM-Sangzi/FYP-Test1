@@ -12,6 +12,7 @@
 | 2026-06 | 第 0 階段：UI 時期 | React 前端＋MSW mock 聊天 UI | ✅ 完成（mock 層） |
 | 2026-10-26 | 第 1 階段 B 模式 | Python desktop core、bridge、診斷頁；HKDF／AES 真實通過；PQC 如實受阻 | ✅ 完成 |
 | 2026-10-26 | 第 1 階段 選項 A | 編譯 native liboqs 0.16.0；ML-KEM-768／ML-DSA-65 真實全數通過 | ✅ 完成 |
+| 2026-10-26 | 第 2 階段：設計文件 | session specification 初稿 v0.1、威脅模型、8 題中英 supervisor review 問題集 | 📝 文件完成（**待 review**） |
 | — | **第 1 階段整體** | **密碼工具可行性 PoC** | ✅ **全部完成** |
 | 待定 | 第 2 階段 | session specification、威脅模型、測試矩陣、supervisor review note | ⏳ 等待文件 |
 | 待定 | 第 3+ 階段 | relay、TLS、SQLite、帳號；雙 client E2EE；聊天整合 | 未開始 |
@@ -183,9 +184,13 @@
 
 - **目前狀態**：第 1 階段（密碼工具可行性 PoC）✅ 完成；
   **E2EE session 尚未實作**；無 relay／TLS／SQLite／帳號／握手。
-- **第 2 階段（等待開始）**：產出可審閱的 session specification、威脅模型、
-  測試矩陣及中英 supervisor review note——等待使用者提供第 2 階段任務
-  文件後，依「唯讀檢查→計劃→確認→執行」流程進行。
+- **第 2 階段（設計文件完成，待 review）**：`stage2-design.md` v0.1——
+  第 1 階段成果摘要（實測 vs 未完成分欄）、client／relay 信任邊界、
+  session specification 初稿（身分／金鑰角色／握手訊息／認證範圍／key
+  confirmation／金鑰派生／nonce-counter／錯誤／生命週期）、8 題中英
+  supervisor review 問題（每題含建議／理由／風險，狀態 OPEN）。
+  **文件尚未經 supervisor 批准；review 是設計審查，不是行政批准，
+  也不是安全證明。** 本階段零程式碼變更。
 - supervisor review 是**設計審查**，不是行政批准，也不是安全證明。
 - 未決設計問題（ML-DSA 參數核定等）將在第 2 階段文件中列出建議、理由
   與風險，不預先假設已批准。
@@ -199,3 +204,34 @@
 | 動工前備份 | `C:/Users/admin/PQPM_backups/PQPM_FYP-main_stage1_prework_2026-10-26_011049/` |
 | `Desktop/.git` | 全程未動（專案是巢狀獨立 repo） |
 | 本文件整理 | 2026-10-26 進行（7 份 MD → 3 份）；**依使用者指示未 commit**，改動留在工作目錄供檢查 |
+
+## 6. 第 2 階段：設計文件（2026-10-26，待 review）
+
+- **交付物**：`docs/stage2-design.md`（v0.1），經使用者批准大綱後撰寫：
+  1. **第 1 階段成果摘要**——實測結果（ML-KEM-768 4/4、ML-DSA-65 5/5、
+     HKDF 2/2、AES-GCM 5/5、公鑰 1184/1952 B、簽章 3309 B）與
+     「未完成／刻意不做」（握手、relay、身分金鑰持久化、聊天整合）
+     **嚴格分欄**；並記錄 Stage 1 結果的限制（元件測試≠協定測試、
+     malformed 靠應用層驗證、測試金鑰≠身分金鑰）。
+  2. **Client／relay 架構與信任邊界**——ASCII 架構圖（標明「設計目標，
+     未實作」）、信任邊界表（relay 不持有任何私鑰／session secret；
+     帳號登入≠peer 認證）、攻擊者模型（對齊 proposal：攔截／篡改／重放／
+     好奇 relay；端點入侵不在範圍）。
+  3. **Session specification 初稿 v0.1**——身分（ML-DSA-65 長期金鑰＋
+     fingerprint 人手核對）、金鑰角色（KEM 每 session 暫態、無 pre-keys、
+     無 ratchet）、握手訊息草案（M1/M2/C1/C2 經 relay store-and-forward）、
+     認證範圍（transcript binding：identities＋session id＋KEM pk＋
+     algo list＋roles）、key confirmation（finished-style HMAC，失敗即
+     abort 不降級）、HKDF-SHA-256 分方向派生（c2s／s2c／confirm）、
+     nonce（隨機 prefix＋單調 counter）與重放拒絕、錯誤分類（密碼運算前
+     先做應用層長度驗證）、金鑰生命週期（重啟即重新握手；不宣稱
+     forward secrecy）。
+  4. **8 題中英 supervisor review 問題**——ML-DSA 參數、fingerprint
+     格式、身分金鑰儲存、relay 認證角色（建議：零參與）、transcript
+     binding 欄位、重放策略、confirmation 失敗 UX、帳號授權與 peer 認證
+     分離。每題：問題（中英）→建議→理由→風險，**狀態全部 OPEN**。
+- **原則遵守**：全文未將自訂流程稱為「已證明安全」；未假設 supervisor
+  已批准；明確聲明 review≠行政批准≠安全證明；本階段**零程式碼變更**
+  （唯讀檢查後僅新增文件）。
+- **狀態**：📝 文件完成，**待 supervisor review**；review 意見回饋後
+  才更新 v0.2，批准前不進入任何握手實作。
