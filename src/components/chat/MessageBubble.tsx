@@ -5,16 +5,27 @@ interface MessageBubbleProps {
   message: Message;
   /** Whether this is the first message of a new date group (shows divider). */
   showDateDivider?: string;
+  /** Whether this starts a run from the same sender (controls spacing). */
+  firstInGroup?: boolean;
 }
 
 /**
- * A single chat bubble (PRD §5.4 Message list).
- * Sent messages align right with a tinted bubble; received align left, grey.
+ * A single chat bubble (PRD §5.4 Message list; redesigned).
+ * Sent messages align right with a tinted bubble; received align left.
+ * Consecutive messages from the same sender sit close together.
  */
-export function MessageBubble({ message, showDateDivider }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  showDateDivider,
+  firstInGroup = true,
+}: MessageBubbleProps) {
   const sent = message.direction === 'sent';
   return (
-    <li className={styles.row} data-sent={sent ? 'true' : 'false'}>
+    <li
+      className={styles.row}
+      data-sent={sent ? 'true' : 'false'}
+      data-first={firstInGroup ? 'true' : 'false'}
+    >
       {showDateDivider && (
         <div className={styles.divider} role="separator" aria-label={showDateDivider}>
           <span>{showDateDivider}</span>

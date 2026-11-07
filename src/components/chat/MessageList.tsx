@@ -31,8 +31,16 @@ export function MessageList({ messages, loading }: MessageListProps) {
           {messages.map((m, i) => {
             const prev = messages[i - 1];
             const divider = dateDividerLabel(prev?.at, m.at);
+            // Same-sender runs are grouped: smaller gap, no repeated clutter.
+            const firstInGroup =
+              i === 0 || divider !== null || prev.direction !== m.direction;
             return (
-              <MessageBubble key={m.id} message={m} showDateDivider={divider ?? undefined} />
+              <MessageBubble
+                key={m.id}
+                message={m}
+                showDateDivider={divider ?? undefined}
+                firstInGroup={firstInGroup}
+              />
             );
           })}
         </ul>

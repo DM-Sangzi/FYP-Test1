@@ -8,7 +8,7 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  /* spacing handled per-row (grouping) in MessageBubble.module.css */
   max-width: 920px;
   margin: 0 auto;
 }

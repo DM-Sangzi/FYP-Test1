@@ -2,6 +2,10 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  margin-top: 2px; /* tight spacing within a same-sender run */
+}
+.row[data-first='true'] {
+  margin-top: var(--space-3);
 }
 .row[data-sent='true'] {
   align-items: flex-end;

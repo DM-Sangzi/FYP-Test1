@@ -1,4 +1,5 @@
 .shell {
+  position: relative; /* anchors the security panel overlay */
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
   height: 100vh;

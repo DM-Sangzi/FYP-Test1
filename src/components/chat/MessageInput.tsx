@@ -54,7 +54,10 @@ export function MessageInput({ value, onChange, onSend, disabled }: MessageInput
           <Send size={18} />
         </button>
       </div>
-      <p className={styles.hint}>Enter to send · Shift+Enter for new line</p>
+      <div className={styles.modeNote}>
+        <strong>Demo mode</strong> — messages stay in this browser; E2EE not active.
+      </div>
+      <p className={styles.hint}>Enter to send, Shift+Enter for a new line</p>
     </div>
   );
 }

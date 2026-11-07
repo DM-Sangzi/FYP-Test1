@@ -29,11 +29,21 @@ async function parse<T>(res: Response): Promise<T> {
     const message =
       (body && typeof body === 'object' && 'error' in body && String(body.error)) ||
       `Request failed (${res.status})`;
-    const err = new Error(message) as Error & { status: number };
-    err.status = res.status;
-    throw err;
+    // ApiError so callers can distinguish API errors with `instanceof`
+    // (AuthContext re-exports this class for compatibility).
+    throw new ApiError(message, res.status);
   }
   return body as T;
+}
+
+/** Error thrown by the API client when the server returns a non-2xx status. */
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
 }
 
 /* ------------------------------------------------------------------ */

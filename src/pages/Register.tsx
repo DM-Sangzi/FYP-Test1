@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Lock, ArrowRight } from 'lucide-react';
+import { Lock, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PasswordField } from '../components/PasswordField';
 import styles from './Auth.module.css';
@@ -52,6 +52,10 @@ export function Register() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
+        <Link to="/login" className={styles.backLink}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          <span>Back to login</span>
+        </Link>
         <Link to="/" className={styles.brand}>
           <span className={styles.brandMark} aria-hidden="true">
             <Lock size={18} />

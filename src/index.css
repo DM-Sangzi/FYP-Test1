@@ -3,45 +3,52 @@
    Tokens (colours, radii, typography) follow PRD §8.1 & §8.2 exactly.
    ========================================================================= */
 
-/* ---- Light theme (default) ---- */
+/* PQPM redesign: dark is the default theme; light is opt-in via
+   [data-theme='light']. Token NAMES are unchanged from v2.0 so every
+   existing CSS module (including CryptoDiagnostics) keeps working. */
+
+/* ---- Dark theme (default) ---- */
 :root {
   /* Surfaces & text */
-  --color-bg: #f5f5f5;
-  --color-surface: #ffffff;
-  --color-surface-2: #fafafa; /* slightly darker neutral surface (sidebar) */
-  --color-surface-3: #f0f1f3; /* hover/active surfaces */
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
+  --color-bg: #0b1220;
+  --color-surface: #111b2b;
+  --color-surface-2: #111b2b;
+  --color-surface-3: #1a2537; /* hover/active surfaces */
+  --color-surface-elevated: #192638; /* popovers, panels */
+  --color-border: #1e2b40;
+  --color-border-strong: #2a3a55;
 
   /* Brand */
-  --color-accent: #0e7490; /* teal */
-  --color-accent-hover: #0b6177;
-  --color-accent-soft: #cffafe;
-  --color-on-accent: #ffffff;
+  --color-accent: #22d3ee;
+  --color-accent-hover: #67e8f9;
+  --color-accent-soft: #0e3a47;
+  --color-on-accent: #062a33;
 
   /* Text */
-  --color-text: #1a1a1a;
-  --color-text-secondary: #374151;
-  --color-muted: #6b7280;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #c6d0de;
+  --color-muted: #a8b5c7;
 
   /* Chat bubbles */
-  --color-bubble-sent: #dbeafe;
-  --color-bubble-sent-text: #1e3a5f;
-  --color-bubble-received: #f3f4f6;
-  --color-bubble-received-text: #1a1a1a;
+  --color-bubble-sent: #164e63;
+  --color-bubble-sent-text: #eaf7fc;
+  --color-bubble-received: #223047;
+  --color-bubble-received-text: #f1f5f9;
 
-  /* Avatar tints */
+  /* Avatar tints (dark-friendly, white initials) */
   --avatar-teal: #0e7490;
-  --avatar-slate: #475569;
-  --avatar-violet: #6d28d9;
+  --avatar-slate: #64748b;
+  --avatar-violet: #8b5cf6;
   --avatar-amber: #b45309;
-  --avatar-rose: #be123c;
-  --avatar-emerald: #047857;
+  --avatar-rose: #e11d48;
+  --avatar-emerald: #059669;
 
   /* Status */
-  --color-online: #16a34a;
-  --color-danger: #dc2626;
-  --color-danger-soft: #fee2e2;
+  --color-online: #34d399;
+  --color-danger: #f87171;
+  --color-danger-soft: #3b1d22;
+  --color-warning: #fbbf24;
+  --color-warning-soft: #3a2e12;
 
   /* Radii */
   --radius-card: 12px;
@@ -70,53 +77,56 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+  /* Shadows (dark: quiet, borders do the work) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
 
-  --header-height: 56px;
-  --sidebar-width: 340px;
+  --header-height: 64px;
+  --sidebar-width: 310px;
   --content-max: 1120px;
 }
 
-/* ---- Dark theme ---- */
-[data-theme='dark'] {
-  --color-bg: #111827;
-  --color-surface: #1f2937;
-  --color-surface-2: #1a2332;
-  --color-surface-3: #283548;
-  --color-border: #374151;
-  --color-border-strong: #4b5563;
+/* ---- Light theme (opt-in) ---- */
+[data-theme='light'] {
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #fafafa;
+  --color-surface-3: #f0f1f3;
+  --color-surface-elevated: #ffffff;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
 
-  --color-accent: #22d3ee;
-  --color-accent-hover: #06b6d4;
-  --color-accent-soft: #155e63;
-  --color-on-accent: #062a33;
+  --color-accent: #0e7490;
+  --color-accent-hover: #0b6177;
+  --color-accent-soft: #cffafe;
+  --color-on-accent: #ffffff;
 
-  --color-text: #f9fafb;
-  --color-text-secondary: #e5e7eb;
-  --color-muted: #9ca3af;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #374151;
+  --color-muted: #6b7280;
 
-  --color-bubble-sent: #1e3a5f;
-  --color-bubble-sent-text: #dbeafe;
-  --color-bubble-received: #374151;
-  --color-bubble-received-text: #f9fafb;
+  --color-bubble-sent: #dbeafe;
+  --color-bubble-sent-text: #1e3a5f;
+  --color-bubble-received: #f3f4f6;
+  --color-bubble-received-text: #1a1a1a;
 
-  --avatar-teal: #22d3ee;
-  --avatar-slate: #94a3b8;
-  --avatar-violet: #a78bfa;
-  --avatar-amber: #fbbf24;
-  --avatar-rose: #fb7185;
-  --avatar-emerald: #34d399;
+  --avatar-teal: #0e7490;
+  --avatar-slate: #475569;
+  --avatar-violet: #6d28d9;
+  --avatar-amber: #b45309;
+  --avatar-rose: #be123c;
+  --avatar-emerald: #047857;
 
-  --color-online: #4ade80;
-  --color-danger: #f87171;
-  --color-danger-soft: #3f1d1d;
+  --color-online: #16a34a;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fee2e2;
+  --color-warning: #b45309;
+  --color-warning-soft: #fef3c7;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
 
 /* ---- Reset ---- */
@@ -178,6 +188,26 @@ textarea {
 
 ul {
   list-style: none;
+}
+
+/* Subtle scrollbars for the app's lists and message areas (visible, thin) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted);
 }
 
 /* ---- Accessibility: visible focus on all interactive elements ---- */

@@ -156,7 +156,8 @@ function SimpleCard({ title, group }: { title: string; group: SimpleGroupResult 
 }
 
 export function CryptoDiagnostics() {
-  const diagnosticsMode = useRef(isDiagnosticsMode()).current;
+  // Constant per mount: lazy useState initializer (not a ref).
+  const [diagnosticsMode] = useState(isDiagnosticsMode);
   const apiRef = useRef<Awaited<ReturnType<typeof waitForBridge>> | null>(null);
   const [bridgeState, setBridgeState] = useState<BridgeState>(
     diagnosticsMode ? 'checking' : 'unavailable',

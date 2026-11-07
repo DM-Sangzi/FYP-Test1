@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Lock, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PasswordField } from '../components/PasswordField';
 import styles from './Auth.module.css';
@@ -39,9 +39,22 @@ export function Login() {
     if (ok) navigate(redirectTo, { replace: true });
   }
 
+  /** Demo convenience: fills the public demo credentials only — the user
+   * still submits the form themselves. Not an authentication bypass. */
+  function useDemoAccount() {
+    setIdentifier('demo');
+    setPassword('password123');
+    setShowFormError(false);
+    clearError();
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.card}>
+        <Link to="/" className={styles.backLink}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          <span>Back to home</span>
+        </Link>
         <Link to="/" className={styles.brand}>
           <span className={styles.brandMark} aria-hidden="true">
             <Lock size={18} />
@@ -51,6 +64,10 @@ export function Login() {
 
         <h1 className={styles.title}>Welcome back</h1>
         <p className={styles.subtitle}>Log in to continue to your chats.</p>
+        <p className={styles.prototypeNote}>
+          Prototype — demo messages stay in this browser; end-to-end
+          encryption is not active.
+        </p>
 
         {justRegistered && (
           <div className={styles.successBanner} role="status">
@@ -119,6 +136,9 @@ export function Login() {
         <div className={styles.demoHint} aria-label="Demo credentials">
           <strong>Demo account:</strong> username <code>demo</code> · password{' '}
           <code>password123</code>
+          <button type="button" className={styles.demoFillBtn} onClick={useDemoAccount}>
+            Use demo account
+          </button>
         </div>
       </div>
     </div>

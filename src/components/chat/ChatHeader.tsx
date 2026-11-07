@@ -1,22 +1,46 @@
-import { ArrowLeft, Info, Search as SearchIcon, ShieldCheck } from 'lucide-react';
+import { useRef } from 'react';
+import { ArrowLeft, LockOpen, Search as SearchIcon } from 'lucide-react';
 import type { Conversation } from '../../types';
+import type { SessionState } from './SecurityPanel';
 import { Avatar } from '../Avatar';
 import styles from './ChatHeader.module.css';
 
+const SESSION_LABEL: Record<SessionState, string> = {
+  'not-established': 'E2EE not established',
+  establishing: 'E2EE establishing',
+  active: 'E2EE active',
+  failed: 'E2EE failed',
+};
+
 interface ChatHeaderProps {
   conversation: Conversation | null;
-  /** Shows the privacy/security indicator (PRD §1.2: communicate security). */
-  onInfo?: () => void;
+  /** Real session state — shown as text, never inferred from login. */
+  sessionState?: SessionState;
+  /** Reflects whether the security panel is open (for aria-expanded). */
+  securityOpen?: boolean;
+  onToggleSecurity?: () => void;
+  /** Opens the read-only contact profile for this conversation. */
+  onOpenProfile?: (opener: HTMLElement | null) => void;
   onSearch?: () => void;
   onBack?: () => void;
 }
 
 /**
- * Chat header (PRD §5.4): avatar + name + status, plus search/info actions.
- * Includes a discreet "secured" indicator so the UI communicates privacy
- * without exposing crypto details (PRD §1.2, US-15).
+ * Chat header (PRD §5.4; redesigned).
+ * Contact identity + presence on the left; a factual security-state chip
+ * (opens the conversation security panel) on the right. The chip reports
+ * the real session state — it never implies encryption that does not exist.
  */
-export function ChatHeader({ conversation, onInfo, onSearch, onBack }: ChatHeaderProps) {
+export function ChatHeader({
+  conversation,
+  sessionState = 'not-established',
+  securityOpen,
+  onToggleSecurity,
+  onOpenProfile,
+  onSearch,
+  onBack,
+}: ChatHeaderProps) {
+  const avatarBtnRef = useRef<HTMLButtonElement>(null);
   if (!conversation) return null;
   const statusLabel =
     conversation.status === 'online'
@@ -37,12 +61,30 @@ export function ChatHeader({ conversation, onInfo, onSearch, onBack }: ChatHeade
           <ArrowLeft size={20} />
         </button>
       )}
-      <Avatar
-        initials={conversation.initials}
-        color={conversation.color}
-        name={conversation.name}
-        online={conversation.status === 'online'}
-      />
+      {onOpenProfile ? (
+        <button
+          type="button"
+          ref={avatarBtnRef}
+          className={styles.avatarBtn}
+          onClick={() => onOpenProfile(avatarBtnRef.current)}
+          aria-label={`View ${conversation.name}'s profile`}
+          title={`View ${conversation.name}'s profile`}
+        >
+          <Avatar
+            initials={conversation.initials}
+            color={conversation.color}
+            name={conversation.name}
+            online={conversation.status === 'online'}
+          />
+        </button>
+      ) : (
+        <Avatar
+          initials={conversation.initials}
+          color={conversation.color}
+          name={conversation.name}
+          online={conversation.status === 'online'}
+        />
+      )}
       <div className={styles.titles}>
         <h2 className={styles.name}>{conversation.name}</h2>
         <span className={`${styles.status} ${conversation.status === 'online' ? styles.online : ''}`}>
@@ -52,9 +94,19 @@ export function ChatHeader({ conversation, onInfo, onSearch, onBack }: ChatHeade
       </div>
 
       <div className={styles.actions}>
-        <span className={styles.secured} title="This chat is secured" aria-label="Secured chat">
-          <ShieldCheck size={16} />
-        </span>
+        {onToggleSecurity && (
+          <button
+            type="button"
+            className={styles.securityChip}
+            onClick={onToggleSecurity}
+            aria-expanded={securityOpen}
+            aria-label={`Conversation security: ${SESSION_LABEL[sessionState]}. Open details`}
+            title={SESSION_LABEL[sessionState]}
+          >
+            <LockOpen size={14} aria-hidden="true" />
+            <span>{SESSION_LABEL[sessionState]}</span>
+          </button>
+        )}
         {onSearch && (
           <button
             type="button"
@@ -63,16 +115,6 @@ export function ChatHeader({ conversation, onInfo, onSearch, onBack }: ChatHeade
             aria-label="Search in conversation"
           >
             <SearchIcon size={18} />
-          </button>
-        )}
-        {onInfo && (
-          <button
-            type="button"
-            className={styles.iconBtn}
-            onClick={onInfo}
-            aria-label="Conversation info"
-          >
-            <Info size={18} />
           </button>
         )}
       </div>

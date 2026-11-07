@@ -7,6 +7,11 @@ import {
 } from '../api/client';
 import type { PublicUser } from '../types';
 
+// ApiError now lives in the API client (where it is thrown); re-exported
+// here so existing imports keep working.
+import { ApiError } from '../api/client';
+export { ApiError };
+
 interface AuthContextValue {
   /** Current authenticated user, or null when logged out. */
   user: PublicUser | null;
@@ -113,14 +118,4 @@ export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
   return ctx;
-}
-
-/** Error thrown by the API client when the server returns a non-2xx status. */
-export class ApiError extends Error {
-  status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-  }
 }

@@ -41,6 +41,8 @@ export interface Conversation {
   lastMessage: string;
   lastMessageAt: string;
   unread: number;
+  /** Optional short self-description shared with contacts (contact profile). */
+  about?: string;
 }
 
 /** Tint options for avatar circles. */
