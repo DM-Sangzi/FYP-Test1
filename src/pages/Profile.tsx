@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import type { Theme } from '../context/ThemeContext';
 import { Avatar } from '../components/Avatar';
+import { TwoFactorSection } from '../components/settings/TwoFactorSection';
 import styles from './Profile.module.css';
 
 const THEME_OPTIONS: Array<{ value: Theme; label: string; icon: typeof Sun }> = [
@@ -102,6 +103,9 @@ export function Profile() {
               </p>
             )}
           </div>
+
+          {/* Two-factor authentication (per-account, TOTP) */}
+          <TwoFactorSection />
 
           {/* Privacy & security — factual status only */}
           <div className={styles.section}>

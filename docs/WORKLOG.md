@@ -15,6 +15,8 @@
 | 2026-10-26 | 第 2 階段：設計文件 | session specification 初稿 v0.1、威脅模型、8 題中英 supervisor review 問題集 | 📝 文件完成（**待 review**） |
 | 2026-10-31 | 前端深色重設計＋可用性精修 | dark-default 主題、chat shell 重構、New chat 專屬視圖、ESLint 10 導入 | ✅ 完成（commit 7bd77b1） |
 | 2026-11-03 | 聯絡人個人資料頁 | 唯讀 Contact Profile 覆蓋層、雙頭像入口、狀態保留實測 | ✅ 完成（含於 7bd77b1） |
+| 2026-11-07 | 好友邀請功能 | 可持久化、可切帳戶驗證的邀請／好友關係；28 項 mock API 負面測試全過 | ✅ 完成（commit aa0d7cc） |
+| 2026-11-07 | TOTP 兩步驟驗證（2FA） | RFC 6238 TOTP＋recovery codes；challenge 登入；6/6 RFC 向量＋35 項實測全過 | ✅ 完成（mock 層） |
 | — | **第 1 階段整體** | **密碼工具可行性 PoC** | ✅ **全部完成** |
 | 待定 | 第 2 階段 | session specification、威脅模型、測試矩陣、supervisor review note | ⏳ 等待文件 |
 | 待定 | 第 3+ 階段 | relay、TLS、SQLite、帳號；雙 client E2EE；聊天整合 | 未開始 |
@@ -287,3 +289,61 @@
   均由 lockfile 還原；教訓：npm 命令需跑完。
 - dev server 檔案監看一度失效（HMR 未推送 CSS clamp 更新）→ 重啟修復；
   交付前以 computed styles 掃描證實瀏覽器收到的是舊規則，重啟後收到新規則。
+
+## 8. 好友邀請功能（2026-11-07）
+
+> 經使用者逐條批准後實作（方案甲：關係持久化、對話殼與訊息 session-only）。
+> commit `aa0d7cc`（14 檔，+2,239／−183）。備份：
+> `Desktop\PQPM_FYP-main_backup_2026-11-07`（2,842 檔 SHA-256 逐檔比對 0 差異）。
+
+- **資料層**：`socialStore.ts`（`pqpm_social_v1`）——驗證式 read-modify-write、
+  損壞即停寫不覆寫、單次 setItem（接受＝更新邀請＋建好友一次完成）。
+- **Mock API**：Bearer 身分標記（解碼 fake-jwt `sub`，非簽章驗證）、合併
+  帳戶＋sample 搜尋附關係狀態、`GET /api/friends`（重新登入可載入）、
+  send／accept／decline／cancel 全防護（自邀、sample、重複、反向、
+  僅收件人可接受、僅寄件人可取消）。
+- **UI**：Sidebar Friend requests 入口＋徽章、Received／Sent 視圖、
+  關係感知搜尋列、空白搜尋顯示 Friends 分組、Contact Profile 共用同一份
+  關係狀態、aria-live 成功／失敗提示；Message 以排序後雙方 user ID 配對，
+  不重複建對話、不以姓名比對（移除 seed Contact Profile 的姓名猜測
+  username heuristic，屬預期變更）。
+- **驗證**：typecheck／lint／build 全過；UI 全流程（註冊→邀請→刷新→接受→
+  Message 不重複→雙向同步→跨分頁 storage event）＋ **28 項 mock API 負面
+  測試**全過；資料損壞停寫實測（原值逐字未動）；亮色／手機 375px 迴歸正常。
+- **聲明**：跨分頁同時寫入仍可能 lost update；mock 無正式後端授權。
+
+## 9. TOTP 兩步驟驗證（2026-11-07）
+
+> 經使用者十項條件批准後實作。備份：
+> `Desktop\PQPM_FYP-main_backup_2fa_2026-11-07`（2,870 檔 0 差異）。
+> 新增依賴：`otpauth`、`qrcode`（runtime）、`@types/qrcode`（dev）——13 檔。
+
+- **帳戶資料**：`User.twoFactor`（secret、lastUsedCounter 防重播、recovery
+  codes 僅存 SHA-256 雜湊、暫存 enrollment 10 分鐘到期）。
+- **登入分支**：啟用 2FA 的帳戶密碼正確後只取得 5 分鐘 challenge（回應**無
+  token 無 user**）；驗 TOTP 或 recovery code 才發 session；challenge id
+  密碼學隨機、記錄帳戶／到期／次數（5 次錯即死）、Back／Cancel 經
+  `challenge/cancel` 端點撤銷 handler 端。
+- **敏感操作**：enrollment／disable／regenerate 一律重新驗證（密碼＋當前
+  TOTP）；disable 亦接受密碼＋未用 recovery code（手機遺失路徑）；已啟用
+  者拒絕重新 enrollment（409）；帳戶級 10 分鐘 5 次失敗鎖定；enrollment
+  錯 5 碼作廢重來。
+- **Recovery codes**：每組 128 bits（16 bytes CSPRNG）→ base32 分組顯示、
+  單次使用、重新產生即撤銷舊碼、只顯示一次、只存雜湊。
+- **userStore 強化**：解析／欄位驗證失敗改為拋錯保護原值（不覆寫）；
+  setItem 失敗拋錯不假報成功（副作用：storage 被封鎖時 register 誠實失敗）。
+- **驗證**：typecheck／lint／build 全過；**RFC 6238 附錄 B 六組向量全過**
+  （獨立 WebCrypto 實作核對，再以該實作交叉驗證 otpauth 接線）；UI 全流程
+  ＋35 項 API 實測（重播、跨挑戰重播、鎖定、到期、取消撤銷、偽造
+  challenge、secret 不外洩、損壞保護、好友迴歸）全過。截圖：恢復碼一次性
+  顯示、登入第二步。
+- **待手動**：手機 authenticator 掃 QR／手動 setup key 實機驗收（無法由
+  自動化取代）。
+- **聲明**：挑戰與鎖定計數在 handler 記憶體（重整即歸零、可繞過）；跨分頁
+  並行下 counter／recovery code 消耗有 read-modify-write 競態，mock 無可靠
+  的全域單次使用保證；信任錨點是瀏覽器自身——**不是 production-ready
+  MFA**；正式後端不存在，`VITE_USE_MOCK=false` 不構成安全部署。2FA 不影響
+  好友、Identity verified、E2EE 狀態。
+- **事件**：dev server 檔案監看再次失效（日誌宣稱 HMR 已更新、transform
+  快取未失效，伺服舊模組）→ 重啟解決；背景 dev server 曾無預警結束
+  （exit 1、日誌無錯誤）→ 重啟接續。

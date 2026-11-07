@@ -219,3 +219,67 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--color-text);
 }
+.demoHintNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+}
+
+/* ---- second login step (2FA challenge) ---- */
+
+.codeInput {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-h3);
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+.twoFactorActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.linkBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  border-radius: var(--radius-input);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.linkBtn:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+.linkBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.linkBtn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Same look as prototypeNote without its negative top margin (used below
+   the challenge actions, not directly under the subtitle). */
+.challengeNote {
+  font-size: var(--fs-xs);
+  color: var(--color-muted);
+  background: var(--color-surface-3);
+  border-radius: var(--radius-input);
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-4);
+  line-height: 1.5;
+}

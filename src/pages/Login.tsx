@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Lock, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Lock, ArrowLeft, ArrowRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PasswordField } from '../components/PasswordField';
 import styles from './Auth.module.css';
@@ -13,11 +13,22 @@ interface LocationState {
 /**
  * Login page (PRD §5.1, US-06/07/08/10).
  *
- * Submits credentials via AuthContext.login, which routes through MSW in mock
- * mode. On success the user is sent to their intended destination (or /chat).
+ * Two steps: credentials, then — only for accounts with 2FA enabled — a
+ * second factor (TOTP or a recovery code). The second step is driven by the
+ * in-memory challenge in AuthContext: refreshing the page drops it and login
+ * restarts, so the second factor cannot be bypassed. "Back" revokes the
+ * challenge on the mock backend, not just in React state.
  */
 export function Login() {
-  const { login, loading, error, clearError } = useAuth();
+  const {
+    login,
+    verifyTwoFactor,
+    cancelChallenge,
+    pendingChallenge,
+    loading,
+    error,
+    clearError,
+  } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const id = useId();
@@ -25,6 +36,10 @@ export function Login() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showFormError, setShowFormError] = useState(false);
+
+  // Second-step local state: TOTP code (or recovery code) entry.
+  const [code, setCode] = useState('');
+  const [useRecovery, setUseRecovery] = useState(false);
 
   const redirectTo = (location.state as LocationState | null)?.from ?? '/chat';
   const justRegistered = (location.state as LocationState | null)?.registered === true;
@@ -35,8 +50,21 @@ export function Login() {
       setShowFormError(true);
       return;
     }
-    const ok = await login(identifier, password);
+    const outcome = await login(identifier, password);
+    if (outcome === 'authenticated') navigate(redirectTo, { replace: true });
+    // 'challenge' renders the second step below; 'failed' shows error.
+  }
+
+  async function handleVerify(e: React.FormEvent) {
+    e.preventDefault();
+    const ok = await verifyTwoFactor(useRecovery ? { recoveryCode: code } : { code });
     if (ok) navigate(redirectTo, { replace: true });
+  }
+
+  async function handleBackToCredentials() {
+    setCode('');
+    setUseRecovery(false);
+    await cancelChallenge();
   }
 
   /** Demo convenience: fills the public demo credentials only — the user
@@ -46,6 +74,94 @@ export function Login() {
     setPassword('password123');
     setShowFormError(false);
     clearError();
+  }
+
+  if (pendingChallenge) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <Link to="/" className={styles.backLink}>
+            <ArrowLeft size={16} aria-hidden="true" />
+            <span>Back to home</span>
+          </Link>
+          <Link to="/" className={styles.brand}>
+            <span className={styles.brandMark} aria-hidden="true">
+              <Lock size={18} />
+            </span>
+            <span className={styles.brandName}>PQPM</span>
+          </Link>
+
+          <h1 className={styles.title}>Two-factor authentication</h1>
+          <p className={styles.subtitle}>
+            Enter the 6-digit code from your authenticator app for{' '}
+            <strong>{pendingChallenge.username}</strong>.
+          </p>
+
+          <form className={styles.form} onSubmit={handleVerify} noValidate>
+            <div className={styles.field}>
+              <label htmlFor={`${id}-code`} className={styles.label}>
+                {useRecovery ? 'Recovery code' : 'Authentication code'}
+              </label>
+              <input
+                id={`${id}-code`}
+                type="text"
+                className={`${styles.input} ${styles.codeInput}`}
+                value={code}
+                inputMode={useRecovery ? 'text' : 'numeric'}
+                autoComplete={useRecovery ? 'off' : 'one-time-code'}
+                autoCapitalize={useRecovery ? 'characters' : 'off'}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  clearError();
+                }}
+                placeholder={useRecovery ? 'xxxxx-xxxxx-xxxxx-xxxxx-xxxxx' : '123456'}
+                // Text field with string state — leading zeros are preserved.
+                autoFocus
+              />
+            </div>
+
+            {error && (
+              <p className={styles.errorText} role="alert">
+                {error}
+              </p>
+            )}
+
+            <button type="submit" className={styles.submit} disabled={loading || code.trim() === ''}>
+              {loading ? 'Verifying…' : 'Verify'}
+              {!loading && <ArrowRight size={18} />}
+            </button>
+          </form>
+
+          <div className={styles.twoFactorActions}>
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={() => {
+                setUseRecovery((v) => !v);
+                setCode('');
+                clearError();
+              }}
+            >
+              {useRecovery ? 'Use an authenticator code instead' : 'Use a recovery code instead'}
+            </button>
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={handleBackToCredentials}
+              disabled={loading}
+            >
+              <ArrowLeft size={14} aria-hidden="true" />
+              <span>Back to login</span>
+            </button>
+          </div>
+
+          <p className={styles.challengeNote}>
+            The challenge expires after a few minutes; refreshing this page
+            restarts the login.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -139,6 +255,12 @@ export function Login() {
           <button type="button" className={styles.demoFillBtn} onClick={useDemoAccount}>
             Use demo account
           </button>
+          {identifier === 'demo' && (
+            <p className={styles.demoHintNote}>
+              <ShieldCheck size={12} aria-hidden="true" /> If 2FA is enabled for
+              demo, a second step asks for your authenticator code.
+            </p>
+          )}
         </div>
       </div>
     </div>

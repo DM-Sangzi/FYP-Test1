@@ -4,6 +4,34 @@
  * so swapping MSW for a real API requires no type changes (PRD §5.3, §13).
  */
 
+/**
+ * Per-account TOTP two-factor state, persisted on the user record.
+ *
+ * Mock trust boundary: this lives in localStorage and is verified in the
+ * browser, so it demonstrates the flow only — it is not production MFA.
+ * `secret`, the provisioning URI and recovery codes are never returned by
+ * any listing/search endpoint and never logged.
+ */
+export interface TwoFactorEnrollment {
+  /** base32 secret awaiting verification. */
+  secret: string;
+  /** ISO timestamp; an expired enrollment is treated as absent. */
+  expiresAt: string;
+  failedAttempts: number;
+}
+
+export interface TwoFactorData {
+  /** True only after a verified enrollment. */
+  enabled: boolean;
+  secret: string;
+  confirmedAt: string;
+  /** Timestep counter of the last successful code; older codes are rejected. */
+  lastUsedCounter: number;
+  /** SHA-256 hex hashes of normalized recovery codes (never the codes). */
+  recoveryHashes: string[];
+  enrollment: TwoFactorEnrollment | null;
+}
+
 /** A registered user account (mock-persisted via MSW + localStorage). */
 export interface User {
   id: string;
@@ -12,6 +40,8 @@ export interface User {
   /** Plaintext only because this is a mock auth layer (PRD §5.3). Never log this. */
   password: string;
   createdAt: string;
+  /** Present once a 2FA enrollment has been started. */
+  twoFactor?: TwoFactorData;
 }
 
 /** The user object returned by the API, never exposing the password. */
@@ -25,6 +55,34 @@ export interface PublicUser {
 export interface AuthSession {
   token: string;
   user: PublicUser;
+}
+
+/** Second-step login challenge for accounts with 2FA enabled. Carries no
+ *  token and no user — the session is only issued after verification. */
+export interface LoginChallenge {
+  challenge: {
+    challengeId: string;
+    username: string;
+    expiresAt: string;
+  };
+}
+
+/** POST /api/auth/login resolves to either a session or a 2FA challenge. */
+export type LoginResult = AuthSession | LoginChallenge;
+
+/** GET /api/auth/2fa/status — never contains secrets. */
+export interface TwoFactorStatus {
+  enabled: boolean;
+  recoveryCodesRemaining: number;
+}
+
+/** POST /api/auth/2fa/enrollment/start. */
+export interface TwoFactorEnrollmentStart {
+  /** otpauth:// provisioning URI — rendered into a QR locally by the app. */
+  otpauthUri: string;
+  /** base32 secret for manual authenticator entry. */
+  secret: string;
+  expiresAt: string;
 }
 
 /** A chat conversation shown in the sidebar. */

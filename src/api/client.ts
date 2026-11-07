@@ -8,18 +8,22 @@
  * is active, which is what makes the backend swap a config-only change.
  *
  * Caller identity: AuthContext stores the in-memory session token here via
- * setAuthToken(); friend/search endpoints attach it as `Authorization: Bearer`.
- * The mock handlers decode the payload's `sub` to identify the caller — this
- * is identity marking for the demo, NOT signature verification.
+ * setAuthToken(); friend/search/settings endpoints attach it as
+ * `Authorization: Bearer`. The mock handlers decode the payload's `sub` to
+ * identify the caller — this is identity marking for the demo, NOT signature
+ * verification.
  */
 import type {
   AuthSession,
   Conversation,
   FriendEntry,
   FriendRequestsOverview,
+  LoginResult,
   Message,
   PeopleResult,
   PublicUser,
+  TwoFactorEnrollmentStart,
+  TwoFactorStatus,
 } from '../types';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK !== 'false';
@@ -54,6 +58,17 @@ async function parse<T>(res: Response): Promise<T> {
   return body as T;
 }
 
+function post<T>(path: string, body?: unknown, withAuth = false): Promise<T> {
+  return fetch(url(path), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(withAuth ? authHeaders() : {}),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }).then(parse<T>);
+}
+
 /** Error thrown by the API client when the server returns a non-2xx status. */
 export class ApiError extends Error {
   status: number;
@@ -68,13 +83,10 @@ export class ApiError extends Error {
 /* Auth                                                                */
 /* ------------------------------------------------------------------ */
 
-export async function login(identifier: string, password: string): Promise<AuthSession> {
-  const res = await fetch(url('/api/auth/login'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier, password }),
-  });
-  return parse<AuthSession>(res);
+/** Password login step. Accounts with 2FA enabled resolve to a challenge —
+ *  the session is only issued by verifyTwoFactorLogin(). */
+export async function login(identifier: string, password: string): Promise<LoginResult> {
+  return post<LoginResult>('/api/auth/login', { identifier, password });
 }
 
 export async function register(
@@ -82,20 +94,69 @@ export async function register(
   email: string,
   password: string,
 ): Promise<{ success: true }> {
-  const res = await fetch(url('/api/auth/register'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, email, password }),
-  });
-  return parse(res);
+  return post<{ success: true }>('/api/auth/register', { username, email, password });
 }
 
 export async function logout(): Promise<{ success: true }> {
-  const res = await fetch(url('/api/auth/logout'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  return parse(res);
+  return post<{ success: true }>('/api/auth/logout');
+}
+
+/* ------------------------------------------------------------------ */
+/* Two-factor authentication                                           */
+/* ------------------------------------------------------------------ */
+
+export async function verifyTwoFactorLogin(
+  challengeId: string,
+  payload: { code?: string; recoveryCode?: string },
+): Promise<AuthSession> {
+  return post<AuthSession>('/api/auth/2fa/verify', { challengeId, ...payload });
+}
+
+/** Revokes the challenge server-side (Login Back/Cancel). */
+export async function cancelLoginChallenge(challengeId: string): Promise<{ success: true }> {
+  return post<{ success: true }>('/api/auth/2fa/challenge/cancel', { challengeId });
+}
+
+export async function getTwoFactorStatus(): Promise<TwoFactorStatus> {
+  const res = await fetch(url('/api/auth/2fa/status'), { headers: authHeaders() });
+  return parse<TwoFactorStatus>(res);
+}
+
+export async function startTwoFactorEnrollment(
+  password: string,
+): Promise<TwoFactorEnrollmentStart> {
+  return post<TwoFactorEnrollmentStart>('/api/auth/2fa/enrollment/start', { password }, true);
+}
+
+/** Returns the plaintext recovery codes exactly once. */
+export async function verifyTwoFactorEnrollment(
+  code: string,
+): Promise<{ recoveryCodes: string[] }> {
+  return post<{ recoveryCodes: string[] }>('/api/auth/2fa/enrollment/verify', { code }, true);
+}
+
+export async function cancelTwoFactorEnrollment(): Promise<{ success: true }> {
+  return post<{ success: true }>('/api/auth/2fa/enrollment/cancel', undefined, true);
+}
+
+export async function disableTwoFactor(payload: {
+  password: string;
+  code?: string;
+  recoveryCode?: string;
+}): Promise<{ success: true; usedRecoveryCode?: boolean }> {
+  return post('/api/auth/2fa/disable', payload, true);
+}
+
+/** Returns the new plaintext recovery codes exactly once. */
+export async function regenerateRecoveryCodes(payload: {
+  password: string;
+  code: string;
+}): Promise<{ recoveryCodes: string[] }> {
+  return post<{ recoveryCodes: string[] }>(
+    '/api/auth/2fa/recovery-codes/regenerate',
+    payload,
+    true,
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -140,12 +201,7 @@ export async function getFriendRequests(): Promise<FriendRequestsOverview> {
 export async function sendFriendRequest(
   toUserId: string,
 ): Promise<{ requestId: string; toUser: { id: string; username: string } }> {
-  const res = await fetch(url('/api/friend-requests'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ toUserId }),
-  });
-  return parse(res);
+  return post('/api/friend-requests', { toUserId }, true);
 }
 
 export type FriendRequestAction = 'accept' | 'decline' | 'cancel';
@@ -154,11 +210,7 @@ export async function respondToFriendRequest(
   requestId: string,
   action: FriendRequestAction,
 ): Promise<{ success: true; friend?: { id: string; username: string } }> {
-  const res = await fetch(url(`/api/friend-requests/${encodeURIComponent(requestId)}/${action}`), {
-    method: 'POST',
-    headers: authHeaders(),
-  });
-  return parse(res);
+  return post(`/api/friend-requests/${encodeURIComponent(requestId)}/${action}`, undefined, true);
 }
 
 /** Expose the current user to non-auth callers (e.g. chat avatar initials). */
