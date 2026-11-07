@@ -43,6 +43,10 @@ export interface Conversation {
   unread: number;
   /** Optional short self-description shared with contacts (contact profile). */
   about?: string;
+  /** Sorted [a, b] user ids when the conversation was created through the
+   *  friend flow. Seed demo conversations predate user accounts and have no
+   *  reliable participant identity, so they omit this field. */
+  participantIds?: [string, string];
 }
 
 /** Tint options for avatar circles. */
@@ -62,8 +66,68 @@ export interface Message {
   at: string;
 }
 
-/** Search result row for `/api/users/search`. */
-export interface UserSearchResult {
+/* ------------------------------------------------------------------ */
+/* Friends & requests                                                  */
+/* ------------------------------------------------------------------ */
+
+/** Lifecycle of a friend request. */
+export type FriendRequestStatus = 'pending' | 'accepted' | 'declined' | 'cancelled';
+
+/** A friend request as persisted in the social store (never sent to the UI). */
+export interface FriendRequest {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  status: FriendRequestStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A persisted friendship between two accounts. */
+export interface Friendship {
+  id: string;
+  /** Sorted pair (userAId < userBId) so lookups never depend on direction. */
+  userAId: string;
+  userBId: string;
+  createdAt: string;
+}
+
+/** Relationship between the signed-in user and a directory entry. */
+export type RelationshipState = 'none' | 'request-sent' | 'request-received' | 'friends';
+
+export interface RelationshipInfo {
+  state: RelationshipState;
+  /** The pending request id, present when state is request-sent/request-received. */
+  requestId?: string;
+}
+
+/** Row of `GET /api/users/search` — only the fields this feature needs. */
+export interface PeopleResult {
   id: string;
   username: string;
+  /** 'account' = real (login-capable) account; 'sample' = demo directory entry. */
+  kind: 'account' | 'sample';
+  relationship: RelationshipInfo;
+}
+
+/** One row of `GET /api/friend-requests` (pending and accepted requests). */
+export interface FriendRequestView {
+  id: string;
+  status: FriendRequestStatus;
+  createdAt: string;
+  otherUser: { id: string; username: string };
+}
+
+/** Response of `GET /api/friend-requests`. */
+export interface FriendRequestsOverview {
+  received: FriendRequestView[];
+  sent: FriendRequestView[];
+}
+
+/** One row of `GET /api/friends` — derived from persisted friendships. */
+export interface FriendEntry {
+  friendshipId: string;
+  userId: string;
+  username: string;
+  friendsSince: string;
 }

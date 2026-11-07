@@ -1,0 +1,195 @@
+/* "Friend requests" sidebar view — same single-column pattern as the
+   new-chat view: back link, title, then scrollable groups. */
+
+.requestsView {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3) var(--space-3) var(--space-2);
+}
+
+.backToChats {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-3);
+  margin-left: calc(var(--space-3) * -1);
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  border-radius: var(--radius-input);
+  transition: background-color 0.15s ease;
+}
+.backToChats:hover {
+  background: var(--color-accent-soft);
+}
+
+.viewTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.errorLine {
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-input);
+  background: var(--color-danger-soft);
+  color: var(--color-text);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+}
+
+/* Scrollable body: the two groups share one region. */
+.group {
+  margin-top: var(--space-2);
+  min-height: 0;
+}
+.requestsView .group:last-of-type {
+  padding-bottom: var(--space-4);
+}
+
+.groupLabel {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.emptyLine {
+  color: var(--color-muted);
+  font-size: var(--fs-small);
+  padding: var(--space-2) 0;
+  margin: 0;
+}
+
+.rows {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Horizontal row: avatar button | name | actions. No nested buttons;
+   long names ellipsize instead of overflowing the narrow sidebar. */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-input);
+  transition: background-color 0.12s ease;
+}
+.row:hover {
+  background: var(--color-surface-3);
+}
+
+.avatarBtn {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+.avatarBtn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.rowName {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.primaryBtn,
+.secondaryBtn {
+  padding: 4px 10px;
+  border-radius: var(--radius-button);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+.primaryBtn {
+  border: none;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.primaryBtn:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+.secondaryBtn {
+  border: 1px solid var(--color-border-strong);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+.secondaryBtn:hover:not(:disabled) {
+  background: var(--color-surface-3);
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+.primaryBtn:disabled,
+.secondaryBtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.primaryBtn:focus-visible,
+.secondaryBtn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.friendsChip,
+.sentChip {
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.friendsChip {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+.sentChip {
+  background: var(--color-surface-3);
+  color: var(--color-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backToChats,
+  .row,
+  .primaryBtn,
+  .secondaryBtn {
+    transition: none;
+  }
+}

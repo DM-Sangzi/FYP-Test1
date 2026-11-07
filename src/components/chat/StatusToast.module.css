@@ -1,0 +1,78 @@
+/* Non-blocking operation status, anchored to the chat shell (position:
+   relative) so it stays inside the app frame on all viewports. */
+
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: min(480px, calc(100% - 32px));
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-input);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-md);
+  animation: toastIn 0.18s ease;
+}
+
+.toast[data-kind='success'] {
+  border-color: var(--color-accent);
+}
+
+.toast[data-kind='error'] {
+  border-color: var(--color-danger);
+}
+
+.text {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-input);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.close:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text);
+}
+.close:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+  .close {
+    transition: none;
+  }
+}

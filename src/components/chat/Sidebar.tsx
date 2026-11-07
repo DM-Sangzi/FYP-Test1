@@ -4,17 +4,30 @@ import {
   ArrowLeft,
   Loader2,
   Lock,
+  MessageSquare,
   MessageSquarePlus,
   Search,
   Settings,
+  Users,
 } from 'lucide-react';
-import type { Conversation } from '../../types';
-import { searchUsers } from '../../api/client';
-import type { UserSearchResult } from '../../types';
+import type {
+  Conversation,
+  FriendEntry,
+  FriendRequestsOverview,
+  PeopleResult,
+} from '../../types';
+import { searchPeople } from '../../api/client';
 import { Avatar } from '../Avatar';
+import { FriendRequests } from './FriendRequests';
 import styles from './Sidebar.module.css';
 
-type SidebarView = 'chats' | 'new-chat';
+type SidebarView = 'chats' | 'new-chat' | 'requests';
+
+/** A peer the social actions can address (always a real account). */
+export interface SocialPeer {
+  id: string;
+  username: string;
+}
 
 interface SidebarProps {
   conversations: Conversation[];
@@ -25,21 +38,35 @@ interface SidebarProps {
   onNavigateToChat?: () => void;
   /** Signed-in user for the bottom profile row (mock auth). */
   currentUser?: { username: string };
-  /** Demo flow: select an existing conversation with this person, or start
-   * a new local one. The parent decides — the sidebar never duplicates. */
-  onSelectContact: (username: string) => void;
   /** Opens the read-only contact profile for a conversation. The opener
    * element is reported so focus can return to it on close. */
   onOpenProfile: (conversationId: string, opener: HTMLElement) => void;
+  /* ---- social (friends & requests) ---- */
+  friends: FriendEntry[];
+  requests: FriendRequestsOverview;
+  socialError: string | null;
+  /** Bumped by the parent after a social action so the people list refetches
+   *  and relationship states stay in sync everywhere. */
+  socialTick: number;
+  /** Key of the social action in flight (disables social buttons). */
+  pendingAction: string | null;
+  onSendFriendRequest: (peer: SocialPeer) => void;
+  onRespondFriendRequest: (requestId: string, action: 'accept' | 'decline' | 'cancel') => void;
+  /** Opens the read-only profile for a search/friends entry. */
+  onOpenPersonProfile: (person: PeopleResult, opener: HTMLElement) => void;
+  /** Opens (or reuses) the conversation with a friend. */
+  onMessagePeer: (peer: SocialPeer) => void;
 }
 
 /**
  * Chat sidebar (PRD §5.4; usability refinement).
  *
- * Two views share one column so lists never stack:
- * - 'chats': conversation search + conversation list (one scroll region).
- * - 'new-chat': Back to chats, a single Search people field, and one
- *   scrollable contact list. The account footer stays outside scrolling.
+ * Three views share one column so lists never stack:
+ * - 'chats': New chat + Friend requests entry, conversation search + list.
+ * - 'new-chat': Back to chats, Search people, the Friends group (empty
+ *   query) and relationship-aware people rows.
+ * - 'requests': Received/Sent friend requests.
+ * The account footer stays outside scrolling.
  */
 export function Sidebar({
   conversations,
@@ -48,15 +75,26 @@ export function Sidebar({
   loading,
   onNavigateToChat,
   currentUser,
-  onSelectContact,
   onOpenProfile,
+  friends,
+  requests,
+  socialError,
+  socialTick,
+  pendingAction,
+  onSendFriendRequest,
+  onRespondFriendRequest,
+  onOpenPersonProfile,
+  onMessagePeer,
 }: SidebarProps) {
   const [view, setView] = useState<SidebarView>('chats');
   const [query, setQuery] = useState('');
   const [peopleQuery, setPeopleQuery] = useState('');
-  const [peopleResults, setPeopleResults] = useState<UserSearchResult[] | null>(null);
+  const [peopleResults, setPeopleResults] = useState<PeopleResult[] | null>(null);
   const [peopleSearching, setPeopleSearching] = useState(false);
   const [peopleError, setPeopleError] = useState(false);
+
+  const receivedPendingCount = requests.received.filter((r) => r.status === 'pending').length;
+  const busy = pendingAction !== null;
 
   const filtered = query.trim()
     ? conversations.filter((c) =>
@@ -64,12 +102,12 @@ export function Sidebar({
       )
     : conversations;
 
-  // Contact search runs only while the new-chat view is open. State resets
-  // happen in event handlers (open/back/typing); this effect only fetches.
+  // People search runs only while the new-chat view is open. socialTick
+  // refetches after social actions so relationship states stay current.
   useEffect(() => {
     if (view !== 'new-chat') return;
     let active = true;
-    searchUsers(peopleQuery.trim())
+    searchPeople(peopleQuery.trim())
       .then((r) => {
         if (!active) return;
         setPeopleResults(r);
@@ -85,11 +123,11 @@ export function Sidebar({
     return () => {
       active = false;
     };
-  }, [peopleQuery, view]);
+  }, [peopleQuery, view, socialTick]);
 
   // Escape returns to the chats view without changing the active chat.
   useEffect(() => {
-    if (view !== 'new-chat') return;
+    if (view === 'chats') return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setView('chats');
     };
@@ -105,6 +143,10 @@ export function Sidebar({
     setView('new-chat');
   }
 
+  function openRequestsView() {
+    setView('requests');
+  }
+
   function backToChats() {
     setView('chats');
     setPeopleQuery('');
@@ -115,12 +157,6 @@ export function Sidebar({
 
   function handleSelect(id: string) {
     onSelect(id);
-    onNavigateToChat?.();
-  }
-
-  function handlePick(username: string) {
-    onSelectContact(username);
-    backToChats();
     onNavigateToChat?.();
   }
 
@@ -145,6 +181,24 @@ export function Sidebar({
             >
               <MessageSquarePlus size={18} aria-hidden="true" />
               <span>New chat</span>
+            </button>
+
+            <button
+              type="button"
+              className={styles.friendRequestsBtn}
+              onClick={openRequestsView}
+            >
+              <Users size={18} aria-hidden="true" />
+              <span>Friend requests</span>
+              {receivedPendingCount > 0 && (
+                <span className={styles.countBadge}>
+                  {receivedPendingCount}
+                  <span className={styles.srOnly}>
+                    {' '}
+                    {receivedPendingCount === 1 ? 'request' : 'requests'} to review
+                  </span>
+                </span>
+              )}
             </button>
 
             <div className={styles.search}>
@@ -225,6 +279,17 @@ export function Sidebar({
             )}
           </nav>
         </>
+      ) : view === 'requests' ? (
+        <FriendRequests
+          onBack={backToChats}
+          received={requests.received}
+          sent={requests.sent}
+          socialError={socialError}
+          pendingAction={pendingAction}
+          onRespond={onRespondFriendRequest}
+          onOpenPersonProfile={onOpenPersonProfile}
+          onMessagePeer={onMessagePeer}
+        />
       ) : (
         <div className={styles.peopleView}>
           <button
@@ -241,19 +306,19 @@ export function Sidebar({
           </label>
           <div className={styles.search}>
             <Search size={16} className={styles.searchIcon} aria-hidden="true" />
-          <input
-            id="people-search"
-            type="search"
-            className={styles.searchInput}
-            placeholder="Search people…"
-            value={peopleQuery}
-            onChange={(e) => {
-              setPeopleQuery(e.target.value);
-              setPeopleResults(null);
-              setPeopleSearching(true);
-              setPeopleError(false);
-            }}
-          />
+            <input
+              id="people-search"
+              type="search"
+              className={styles.searchInput}
+              placeholder="Search people…"
+              value={peopleQuery}
+              onChange={(e) => {
+                setPeopleQuery(e.target.value);
+                setPeopleResults(null);
+                setPeopleSearching(true);
+                setPeopleError(false);
+              }}
+            />
           </div>
 
           <div className={styles.peopleList} aria-live="polite">
@@ -266,28 +331,73 @@ export function Sidebar({
               <p className={styles.peopleState}>
                 Search failed. Check the connection and try again.
               </p>
-            ) : peopleResults && peopleResults.length === 0 ? (
-              <p className={styles.peopleState}>No people found.</p>
+            ) : peopleResults === null ? (
+              <p className={styles.peopleState}>Searching…</p>
             ) : (
-              <ul className={styles.peopleListUl}>
-                {(peopleResults ?? []).map((u) => (
-                  <li key={u.id}>
-                    <button
-                      type="button"
-                      className={styles.peopleRow}
-                      onClick={() => handlePick(u.username)}
-                    >
-                      <Avatar
-                        initials={u.username.slice(0, 2)}
-                        color="slate"
-                        size="sm"
-                        name={u.username}
-                      />
-                      <span className={styles.peopleName}>{u.username}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <>
+                {/* Friends group: the persisted friends list, shown while the
+                    search field is empty. Independent of the query results. */}
+                {peopleQuery.trim() === '' && (
+                  <section className={styles.group} aria-labelledby="friends-heading">
+                    <h3 id="friends-heading" className={styles.groupLabel}>
+                      Friends
+                    </h3>
+                    {socialError ? (
+                      <p className={styles.socialError} role="alert">
+                        {socialError}
+                      </p>
+                    ) : friends.length === 0 ? (
+                      <p className={styles.peopleState}>
+                        No friends yet. Search below and send a friend request.
+                      </p>
+                    ) : (
+                      <ul className={styles.peopleListUl}>
+                        {friends.map((f) => (
+                          <PersonRow
+                            key={f.userId}
+                            person={{
+                              id: f.userId,
+                              username: f.username,
+                              kind: 'account',
+                              relationship: { state: 'friends' },
+                            }}
+                            busy={busy}
+                            onOpenPersonProfile={onOpenPersonProfile}
+                            onSendFriendRequest={onSendFriendRequest}
+                            onRespondFriendRequest={onRespondFriendRequest}
+                            onMessagePeer={onMessagePeer}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                )}
+
+                <section
+                  className={styles.group}
+                  aria-label={peopleQuery.trim() === '' ? 'People directory' : 'Search results'}
+                >
+                  {peopleResults.length === 0 && peopleQuery.trim() !== '' ? (
+                    <p className={styles.peopleState}>No people found.</p>
+                  ) : peopleResults.length === 0 ? (
+                    <p className={styles.peopleState}>No people to show.</p>
+                  ) : (
+                    <ul className={styles.peopleListUl}>
+                      {peopleResults.map((u) => (
+                        <PersonRow
+                          key={u.id}
+                          person={u}
+                          busy={busy}
+                          onOpenPersonProfile={onOpenPersonProfile}
+                          onSendFriendRequest={onSendFriendRequest}
+                          onRespondFriendRequest={onRespondFriendRequest}
+                          onMessagePeer={onMessagePeer}
+                        />
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </>
             )}
           </div>
         </div>
@@ -318,6 +428,111 @@ export function Sidebar({
         </footer>
       )}
     </aside>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Relationship-aware person row                                       */
+/* ------------------------------------------------------------------ */
+
+interface PersonRowProps {
+  person: PeopleResult;
+  busy: boolean;
+  onOpenPersonProfile: (person: PeopleResult, opener: HTMLElement) => void;
+  onSendFriendRequest: (peer: SocialPeer) => void;
+  onRespondFriendRequest: (requestId: string, action: 'accept' | 'decline' | 'cancel') => void;
+  onMessagePeer: (peer: SocialPeer) => void;
+}
+
+/**
+ * One directory/friend row: avatar opens the read-only profile; the name is
+ * plain text; relationship actions sit at the end. Flat buttons only (no
+ * nesting), long names ellipsize — same split-row pattern as conversations.
+ */
+function PersonRow({
+  person,
+  busy,
+  onOpenPersonProfile,
+  onSendFriendRequest,
+  onRespondFriendRequest,
+  onMessagePeer,
+}: PersonRowProps) {
+  const isSample = person.kind === 'sample';
+  const state = person.relationship.state;
+
+  return (
+    <li className={styles.peopleRowItem}>
+      <button
+        type="button"
+        className={styles.peopleAvatarBtn}
+        onClick={(e) => onOpenPersonProfile(person, e.currentTarget)}
+        aria-label={`View ${person.username}'s profile`}
+        title={`View ${person.username}'s profile`}
+      >
+        <Avatar
+          initials={person.username.slice(0, 2).toUpperCase()}
+          color="slate"
+          size="sm"
+          name={person.username}
+        />
+      </button>
+      <span className={styles.peopleName} title={person.username}>
+        {person.username}
+      </span>
+      {isSample ? (
+        <span className={styles.sampleChip}>Sample contact</span>
+      ) : state === 'none' ? (
+        <button
+          type="button"
+          className={styles.actionBtn}
+          disabled={busy}
+          onClick={() => onSendFriendRequest({ id: person.id, username: person.username })}
+        >
+          Add friend
+        </button>
+      ) : state === 'request-sent' ? (
+        <span className={styles.actionGroup}>
+          <span className={styles.stateChip}>Request sent</span>
+          <button
+            type="button"
+            className={styles.actionBtnGhost}
+            disabled={busy}
+            onClick={() => onRespondFriendRequest(person.relationship.requestId!, 'cancel')}
+          >
+            Cancel
+          </button>
+        </span>
+      ) : state === 'request-received' ? (
+        <span className={styles.actionGroup}>
+          <button
+            type="button"
+            className={styles.actionBtn}
+            disabled={busy}
+            onClick={() => onRespondFriendRequest(person.relationship.requestId!, 'accept')}
+          >
+            Accept
+          </button>
+          <button
+            type="button"
+            className={styles.actionBtnGhost}
+            disabled={busy}
+            onClick={() => onRespondFriendRequest(person.relationship.requestId!, 'decline')}
+          >
+            Decline
+          </button>
+        </span>
+      ) : (
+        <button
+          type="button"
+          className={styles.actionBtn}
+          disabled={busy}
+          onClick={() => onMessagePeer({ id: person.id, username: person.username })}
+        >
+          <MessageSquare size={14} aria-hidden="true" />
+          <span>Message</span>
+        </button>
+      )}
+    </li>
   );
 }
 

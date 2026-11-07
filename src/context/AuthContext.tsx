@@ -4,6 +4,7 @@ import {
   login as apiLogin,
   register as apiRegister,
   logout as apiLogout,
+  setAuthToken,
 } from '../api/client';
 import type { PublicUser } from '../types';
 
@@ -54,6 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const session = await apiLogin(identifier, password);
       setToken(session.token);
       setUser(session.user);
+      // Share the in-memory token with the API client so friend/search
+      // endpoints can identify the caller (mock identity marking).
+      setAuthToken(session.token);
       return true;
     } catch (err) {
       const message =
@@ -88,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await apiLogout();
+    setAuthToken(null);
     setToken(null);
     setUser(null);
     setError(null);

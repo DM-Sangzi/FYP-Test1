@@ -1,57 +1,77 @@
 import { useEffect, useRef } from 'react';
 import { ArrowLeft, MessageSquare } from 'lucide-react';
-import type { Conversation } from '../../types';
-import { seedSearchableUsers } from '../../api/seed';
+import type { AvatarColor, RelationshipInfo } from '../../types';
 import { Avatar } from '../Avatar';
 import styles from './ContactProfile.module.css';
 
+/**
+ * What the profile overlay shows. Built by the parent from either a
+ * conversation (seed demo chats) or a directory entry (search results /
+ * friends), so the overlay never guesses identity from names itself.
+ */
+export interface ProfileTarget {
+  /** Stable key for React and for focus management. */
+  key: string;
+  kind: 'conversation' | 'account' | 'sample';
+  displayName: string;
+  /** Only set when the username is reliably known (account ids, never
+   *  name-guessed from a display name). */
+  username?: string;
+  about?: string;
+  /** Only set when presence data actually exists (seed conversations). */
+  online?: boolean;
+  color: AvatarColor;
+  initials: string;
+  /** The other account's user id (account-kind targets only). */
+  peerUserId?: string;
+  /** The conversation this target was opened from (conversation-kind only). */
+  conversationId?: string;
+  /** Relationship to the signed-in user — same source as search results. */
+  relationship?: RelationshipInfo;
+}
+
 interface ContactProfileProps {
-  conversation: Conversation;
+  target: ProfileTarget;
   /** App-level demo state (designated demo account) — gates the demo note. */
   isDemoAccount: boolean;
   /** Mobile full-screen modal: cycle Tab inside and mark the dialog modal. */
   trapFocus: boolean;
+  /** Key of the social action in flight (disables social buttons). */
+  pendingAction: string | null;
   onClose: () => void;
   /** "Message {name}" — closes the profile and opens that conversation. */
-  onMessage: () => void;
+  onMessage?: () => void;
+  /** Friend actions — same handlers the search results use. */
+  onSendFriendRequest?: () => void;
+  onRespondFriendRequest?: (action: 'accept' | 'decline' | 'cancel') => void;
 }
 
 /**
- * Heuristic join against the existing public user directory (the same seed
- * data behind /api/users/search): a conversation's first name matches a
- * username. Deterministic for the current seed; when no match exists (e.g.
- * Ben Tsang, Chloe Wong) the Username row is omitted entirely. Not a
- * reliable identity link — do not extend it to security decisions.
- */
-function contactUsername(name: string): string | null {
-  const first = name.split(' ')[0].toLowerCase();
-  const match = seedSearchableUsers.find(
-    (u) => u.username.toLowerCase() === first,
-  );
-  return match ? `@${match.username}` : null;
-}
-
-/**
- * Read-only Contact Profile overlay (usability task 3, reference layout).
+ * Read-only Contact Profile overlay.
  *
- * Shows only data that exists on the conversation record: display name,
- * a joined public username (when one matches), optional About, and presence.
- * There is intentionally no email, no edit/settings/logout controls, no
- * security badges, and no username fabrication. Rendering this overlay never
- * unmounts the chat behind it, so the draft, selection and scroll position
- * are preserved.
+ * Shows only data that exists on the target: display name, a username only
+ * when reliably known, optional About, presence when known, and the shared
+ * relationship state for real accounts. Sample contacts are directory-only
+ * demonstration entries — no friend actions. There is intentionally no
+ * email, no edit/settings/logout controls, and no security badges. Rendering
+ * this overlay never unmounts the chat behind it, so the draft, selection
+ * and scroll position are preserved.
  */
 export function ContactProfile({
-  conversation,
+  target,
   isDemoAccount,
   trapFocus,
+  pendingAction,
   onClose,
   onMessage,
+  onSendFriendRequest,
+  onRespondFriendRequest,
 }: ContactProfileProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const username = contactUsername(conversation.name);
-  const online = conversation.status === 'online';
-  const firstName = conversation.name.split(' ')[0];
+  const online = target.online;
+  const firstName = target.displayName.split(' ')[0];
+  const busy = pendingAction !== null;
+  const state = target.relationship?.state;
 
   // Focus the panel on mount.
   useEffect(() => {
@@ -92,7 +112,7 @@ export function ContactProfile({
       className={styles.overlay}
       role="dialog"
       aria-modal={trapFocus || undefined}
-      aria-label={`Contact profile — ${conversation.name}`}
+      aria-label={`Contact profile — ${target.displayName}`}
       tabIndex={-1}
     >
       <div className={styles.backRow}>
@@ -109,20 +129,22 @@ export function ContactProfile({
 
           <div className={styles.identity}>
             <Avatar
-              initials={conversation.initials}
-              color={conversation.color}
+              initials={target.initials}
+              color={target.color}
               size="xl"
-              name={conversation.name}
+              name={target.displayName}
             />
             <div className={styles.identityInfo}>
-              <p className={styles.displayName}>{conversation.name}</p>
-              {username && <p className={styles.atUsername}>{username}</p>}
-              <p
-                className={`${styles.presence} ${online ? styles.presenceOnline : styles.presenceOffline}`}
-              >
-                <span className={styles.presenceDot} aria-hidden="true" />
-                {online ? 'Online' : 'Offline'}
-              </p>
+              <p className={styles.displayName}>{target.displayName}</p>
+              {target.username && <p className={styles.atUsername}>{`@${target.username}`}</p>}
+              {online !== undefined && (
+                <p
+                  className={`${styles.presence} ${online ? styles.presenceOnline : styles.presenceOffline}`}
+                >
+                  <span className={styles.presenceDot} aria-hidden="true" />
+                  {online ? 'Online' : 'Offline'}
+                </p>
+              )}
             </div>
           </div>
 
@@ -130,26 +152,103 @@ export function ContactProfile({
           <dl className={styles.details}>
             <div className={styles.detailRow}>
               <dt>Display name</dt>
-              <dd>{conversation.name}</dd>
+              <dd>{target.displayName}</dd>
             </div>
-            {username && (
+            {target.kind === 'sample' && (
               <div className={styles.detailRow}>
-                <dt>Username</dt>
-                <dd>{username}</dd>
+                <dt>Type</dt>
+                <dd>Sample contact</dd>
               </div>
             )}
-            {conversation.about && (
+            {target.username && (
+              <div className={styles.detailRow}>
+                <dt>Username</dt>
+                <dd>{`@${target.username}`}</dd>
+              </div>
+            )}
+            {target.about && (
               <div className={styles.detailRow}>
                 <dt>About</dt>
-                <dd>{conversation.about}</dd>
+                <dd>{target.about}</dd>
               </div>
             )}
           </dl>
 
-          <button type="button" className={styles.messageBtn} onClick={onMessage}>
-            <MessageSquare size={18} aria-hidden="true" />
-            <span>Message {firstName}</span>
-          </button>
+          {target.kind === 'account' && target.relationship && (
+            <div className={styles.socialBlock}>
+              <h3 className={styles.detailsTitle}>Connection</h3>
+              {state === 'none' && onSendFriendRequest && (
+                <button
+                  type="button"
+                  className={styles.messageBtn}
+                  disabled={busy}
+                  onClick={onSendFriendRequest}
+                >
+                  <span>Add friend</span>
+                </button>
+              )}
+              {state === 'request-sent' && onRespondFriendRequest && (
+                <div className={styles.socialRow}>
+                  <span className={styles.relLine}>Request sent</span>
+                  <button
+                    type="button"
+                    className={styles.secondaryBtn}
+                    disabled={busy}
+                    onClick={() => onRespondFriendRequest('cancel')}
+                  >
+                    Cancel request
+                  </button>
+                </div>
+              )}
+              {state === 'request-received' && onRespondFriendRequest && (
+                <div className={styles.socialRow}>
+                  <button
+                    type="button"
+                    className={styles.messageBtn}
+                    disabled={busy}
+                    onClick={() => onRespondFriendRequest('accept')}
+                  >
+                    <span>Accept</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.secondaryBtn}
+                    disabled={busy}
+                    onClick={() => onRespondFriendRequest('decline')}
+                  >
+                    Decline
+                  </button>
+                </div>
+              )}
+              {state === 'friends' && (
+                <div className={styles.socialRow}>
+                  <span className={styles.relLine}>You are friends</span>
+                  {onMessage && (
+                    <button type="button" className={styles.messageBtn} onClick={onMessage}>
+                      <MessageSquare size={18} aria-hidden="true" />
+                      <span>Message {firstName}</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {target.kind === 'sample' && (
+            <p className={styles.sampleNote}>
+              Sample contact — a demonstration directory entry without an
+              account. Friend requests are not available.
+            </p>
+          )}
+
+          {/* Legacy demo conversations keep their Message entry (messaging is
+              unchanged); friend actions above are reserved for accounts. */}
+          {target.kind === 'conversation' && onMessage && (
+            <button type="button" className={styles.messageBtn} onClick={onMessage}>
+              <MessageSquare size={18} aria-hidden="true" />
+              <span>Message {firstName}</span>
+            </button>
+          )}
 
           <p className={styles.footnote}>
             Only shared profile information is shown.
