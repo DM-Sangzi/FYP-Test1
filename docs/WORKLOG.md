@@ -13,6 +13,8 @@
 | 2026-10-26 | 第 1 階段 B 模式 | Python desktop core、bridge、診斷頁；HKDF／AES 真實通過；PQC 如實受阻 | ✅ 完成 |
 | 2026-10-26 | 第 1 階段 選項 A | 編譯 native liboqs 0.16.0；ML-KEM-768／ML-DSA-65 真實全數通過 | ✅ 完成 |
 | 2026-10-26 | 第 2 階段：設計文件 | session specification 初稿 v0.1、威脅模型、8 題中英 supervisor review 問題集 | 📝 文件完成（**待 review**） |
+| 2026-10-31 | 前端深色重設計＋可用性精修 | dark-default 主題、chat shell 重構、New chat 專屬視圖、ESLint 10 導入 | ✅ 完成（commit 7bd77b1） |
+| 2026-11-03 | 聯絡人個人資料頁 | 唯讀 Contact Profile 覆蓋層、雙頭像入口、狀態保留實測 | ✅ 完成（含於 7bd77b1） |
 | — | **第 1 階段整體** | **密碼工具可行性 PoC** | ✅ **全部完成** |
 | 待定 | 第 2 階段 | session specification、威脅模型、測試矩陣、supervisor review note | ⏳ 等待文件 |
 | 待定 | 第 3+ 階段 | relay、TLS、SQLite、帳號；雙 client E2EE；聊天整合 | 未開始 |
@@ -200,7 +202,7 @@
 | 項目 | 狀態 |
 |---|---|
 | GitHub | https://github.com/FYPwinRM/PQPM_FYP_2（Private，`main`） |
-| Commits | `9fd97e5`（B 模式全部產出）→ `c76d5a3`（選項 A 完成） |
+| Commits | `9fd97e5`（B 模式全部產出）→ `c76d5a3`（選項 A 完成）→ `a0e1198`（第 2 階段設計文件，使用者自行提交）→ `7bd77b1`（前端重設計＋聯絡人資料頁） |
 | 動工前備份 | `C:/Users/admin/PQPM_backups/PQPM_FYP-main_stage1_prework_2026-10-26_011049/` |
 | `Desktop/.git` | 全程未動（專案是巢狀獨立 repo） |
 | 本文件整理 | 2026-10-26 進行（7 份 MD → 3 份）；**依使用者指示未 commit**，改動留在工作目錄供檢查 |
@@ -235,3 +237,53 @@
   （唯讀檢查後僅新增文件）。
 - **狀態**：📝 文件完成，**待 supervisor review**；review 意見回饋後
   才更新 v0.2，批准前不進入任何握手實作。
+
+## 7. 前端深色重設計＋聯絡人個人資料頁（2026-10-31 – 11-03）
+
+### 7.1 前端深色重設計（16 檔）
+
+- dark-default 主題 tokens（變數名稱不變，全站 CSS 相容）、重構 chat shell、
+  SecurityPanel（焦點管理：開啟聚焦／關閉返回）、New chat 專屬視圖、
+  composer Demo note、MessageList 分組（data-first）。
+- **ApiError 修復**（既有 bug）：`client.ts` 拋普通 Error 但 AuthContext 用
+  `instanceof ApiError` 判斷——登入錯誤永遠顯示籠統訊息；修後正確顯示
+  PRD US-07 的「Wrong username or password」。
+
+### 7.2 可用性精修＋ESLint（經使用者批准）
+
+- New chat 專屬視圖（取代浮動面板）、footer 入口、composer Demo note。
+- **ESLint 10 工具鏈**（devDependencies）＋flat config；修復全部發現問題
+  （effect 內同步 setState 模式、render 期間 ref 存取）。
+- **ApiError 修復**如上。
+
+### 7.3 聯絡人個人資料頁（Contact Profile，2026-11-03）
+
+- **唯讀覆蓋層**：/chat 內主區域顯示聯絡人資料（Display name／@username／
+  Online），不離開 /chat——草稿、選取對話、捲動位置**實測保留**。
+- **雙頭像入口**：Sidebar 對話列頭像拆為獨立按鈕（點頭像＝開 Profile，
+  點其餘＝選取，拆列不嵌套）；ChatHeader 頭像按鈕（View …'s profile）。
+- **背景互動防護**：開啟時 chatPane 設 `inert`（不可點／不可聚焦）；手機
+  375 全螢幕 modal＋Tab 循環鎖定＋sidebar 一併 inert；桌面 sidebar 保持
+  可操作（點另一頭像切換 Profile、點對話列關閉並選取）。
+- **資料**：Display name／@username（名字比對既有 seedSearchableUsers，
+  無配對即省略列）／About（seed 新增 `about` 欄位，經批准）；不含 Email／
+  最後上線。
+- **驗收**：頭像入口、切換 Profile、列點擊關閉＋選取、草稿/捲動/選取
+  保留、inert、手機 modal、明暗主題——全部實測通過。
+- **seed `about` 欄位**：決策 2 經批准後新增（Alice/Priya/Chloe 有值，
+  Ben/Marcus 省略→示範缺列行為）；`types/index.ts` 加 `about?: string`。
+
+### 7.4 Sidebar 視覺回歸修正（2026-11-03）
+
+- 症狀：頭像白框、頭像與文字上下排列、選取背景只在文字上。
+- **實證原因**：`Sidebar.module.css` 被還原回拆列前版本（itemRow/avatarBtn/
+  activeRow 樣式消失），TSX 拆列結構保留→CSS Modules 類別無對應樣式。
+- 修正：重套拆列樣式＋li 加 `activeRow`＋移除無對應的 `styles.active`；
+  computed styles 與截圖雙重核實。
+
+### 7.5 事件：node_modules 三度半殘＋dev server 檔案監看失效
+
+- node_modules 三次被中斷的 npm 操作清空（症狀：`tsc`/`eslint` 不存在），
+  均由 lockfile 還原；教訓：npm 命令需跑完。
+- dev server 檔案監看一度失效（HMR 未推送 CSS clamp 更新）→ 重啟修復；
+  交付前以 computed styles 掃描證實瀏覽器收到的是舊規則，重啟後收到新規則。
