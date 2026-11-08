@@ -42,13 +42,19 @@ export interface User {
   createdAt: string;
   /** Present once a 2FA enrollment has been started. */
   twoFactor?: TwoFactorData;
+  /** Own profile photo as a 256×256 JPEG data URL. Absent on older accounts
+   *  — those simply keep showing initials (no migration needed). */
+  avatar?: string;
 }
 
-/** The user object returned by the API, never exposing the password. */
+/** The user object returned by the API, never exposing the password, the
+ *  2FA secret or recovery hashes (whitelist serialization only). */
 export interface PublicUser {
   id: string;
   username: string;
   email: string;
+  /** Public avatar as a JPEG data URL; absent = show initials. */
+  avatarUrl?: string;
 }
 
 /** Result of a successful login: a fake JWT + the authenticated user. */
@@ -166,6 +172,9 @@ export interface PeopleResult {
   /** 'account' = real (login-capable) account; 'sample' = demo directory entry. */
   kind: 'account' | 'sample';
   relationship: RelationshipInfo;
+  /** Public avatar of the account; absent on sample entries and accounts
+   *  without a photo (initials are shown instead). */
+  avatarUrl?: string;
 }
 
 /** One row of `GET /api/friend-requests` (pending and accepted requests). */
@@ -173,7 +182,7 @@ export interface FriendRequestView {
   id: string;
   status: FriendRequestStatus;
   createdAt: string;
-  otherUser: { id: string; username: string };
+  otherUser: { id: string; username: string; avatarUrl?: string };
 }
 
 /** Response of `GET /api/friend-requests`. */
@@ -188,4 +197,6 @@ export interface FriendEntry {
   userId: string;
   username: string;
   friendsSince: string;
+  /** Public avatar of the friend; absent = show initials. */
+  avatarUrl?: string;
 }

@@ -14,6 +14,9 @@ const SESSION_LABEL: Record<SessionState, string> = {
 
 interface ChatHeaderProps {
   conversation: Conversation | null;
+  /** The peer's avatar from the shared social data (same source as the
+   *  Contact Profile); absent or failed load = initials fallback. */
+  avatarUrl?: string;
   /** Real session state — shown as text, never inferred from login. */
   sessionState?: SessionState;
   /** Reflects whether the security panel is open (for aria-expanded). */
@@ -33,6 +36,7 @@ interface ChatHeaderProps {
  */
 export function ChatHeader({
   conversation,
+  avatarUrl,
   sessionState = 'not-established',
   securityOpen,
   onToggleSecurity,
@@ -75,6 +79,7 @@ export function ChatHeader({
             color={conversation.color}
             name={conversation.name}
             online={conversation.status === 'online'}
+            src={avatarUrl}
           />
         </button>
       ) : (
@@ -83,6 +88,7 @@ export function ChatHeader({
           color={conversation.color}
           name={conversation.name}
           online={conversation.status === 'online'}
+          src={avatarUrl}
         />
       )}
       <div className={styles.titles}>

@@ -63,6 +63,33 @@ function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : 'Something went wrong. Please try again.';
 }
 
+/** The other participant of a 1:1 conversation, only when the signed-in
+ *  user is part of the persisted pair — never name-guessed from display
+ *  names (seed conversations without participantIds have no peer). */
+function peerIdOf(conversation: Conversation, myId: string | null): string | undefined {
+  if (!conversation.participantIds || !myId) return undefined;
+  const [a, b] = conversation.participantIds;
+  if (a === myId) return b;
+  if (b === myId) return a;
+  return undefined;
+}
+
+/** Peer avatar from the shared social data — the same stable-id source the
+ *  Contact Profile uses. Friends take precedence over request rows, but both
+ *  resolve live through the same fetch against the same user store, so
+ *  neither can shadow the other with a stale or removed photo. */
+function peerAvatarUrl(
+  peerId: string,
+  friends: FriendEntry[],
+  requests: FriendRequestsOverview,
+): string | undefined {
+  return (
+    friends.find((f) => f.userId === peerId)?.avatarUrl ??
+    requests.sent.find((r) => r.otherUser.id === peerId)?.otherUser.avatarUrl ??
+    requests.received.find((r) => r.otherUser.id === peerId)?.otherUser.avatarUrl
+  );
+}
+
 /** Fetches both social views in one go (no state access — UI agnostic). */
 async function fetchSocialState(): Promise<{
   friends: FriendEntry[];
@@ -348,6 +375,15 @@ export function Chat() {
   const activeConversation =
     conversations.find((c) => c.id === activeId) ?? null;
 
+  /** Conversation id → the peer's avatar, recomputed on every render from
+   *  the shared social state (no memoized copies that could go stale when
+   *  an avatar is changed or removed). */
+  const conversationAvatars: Record<string, string | undefined> = {};
+  for (const c of conversations) {
+    const peerId = peerIdOf(c, user?.id ?? null);
+    if (peerId) conversationAvatars[c.id] = peerAvatarUrl(peerId, visibleFriends, visibleRequests);
+  }
+
   function handleSend() {
     const text = draft.trim();
     if (!text || !activeId) return;
@@ -452,6 +488,12 @@ export function Chat() {
     );
   }
 
+  /** Avatar only when reliably known through the same social data — same
+   *  stable-id association as usernameForPeer, never name guessing. */
+  function avatarForPeer(peerId: string): string | undefined {
+    return peerAvatarUrl(peerId, visibleFriends, visibleRequests);
+  }
+
   function profileTargetFromConversation(c: Conversation): ProfileTarget {
     const myId = user?.id;
     const peerId =
@@ -465,6 +507,7 @@ export function Chat() {
       kind: peerId ? 'account' : 'conversation',
       displayName: c.name,
       username: peerId ? usernameForPeer(peerId) : undefined,
+      avatarUrl: peerId ? avatarForPeer(peerId) : undefined,
       about: c.about,
       online: c.status === 'online',
       color: c.color,
@@ -481,6 +524,7 @@ export function Chat() {
       kind: p.kind,
       displayName: p.username,
       username: p.username,
+      avatarUrl: p.avatarUrl,
       color: 'slate',
       initials: p.username.slice(0, 2).toUpperCase(),
       peerUserId: p.kind === 'account' ? p.id : undefined,
@@ -542,7 +586,8 @@ export function Chat() {
           onSelect={handleSelect}
           loading={convLoading}
           onNavigateToChat={() => setPane('thread')}
-          currentUser={user ? { username: user.username } : undefined}
+          currentUser={user ? { username: user.username, avatarUrl: user.avatarUrl } : undefined}
+          conversationAvatars={conversationAvatars}
           onOpenProfile={openConversationProfile}
           friends={visibleFriends}
           requests={visibleRequests}
@@ -567,6 +612,7 @@ export function Chat() {
           <>
             <ChatHeader
               conversation={activeConversation}
+              avatarUrl={conversationAvatars[activeConversation.id]}
               onBack={() => setPane('list')}
               securityOpen={securityOpen}
               onToggleSecurity={() => setSecurityOpen((v) => !v)}

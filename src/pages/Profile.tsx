@@ -10,7 +10,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import type { Theme } from '../context/ThemeContext';
-import { Avatar } from '../components/Avatar';
+import { AvatarEditor } from '../components/settings/AvatarEditor';
 import { TwoFactorSection } from '../components/settings/TwoFactorSection';
 import styles from './Profile.module.css';
 
@@ -38,7 +38,6 @@ export function Profile() {
   }
 
   if (!user) return null;
-  const initials = user.username.slice(0, 2);
 
   return (
     <div className={styles.page}>
@@ -60,13 +59,7 @@ export function Profile() {
           {/* Profile */}
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Profile</h2>
-            <div className={styles.identity}>
-              <Avatar initials={initials} color="teal" size="lg" name={user.username} />
-              <div className={styles.identityInfo}>
-                <p className={styles.displayName}>{user.username}</p>
-                <p className={styles.memberSince}>PQPM member (demo account)</p>
-              </div>
-            </div>
+            <AvatarEditor />
             <dl className={styles.details}>
               <div className={styles.detailRow}>
                 <dt>

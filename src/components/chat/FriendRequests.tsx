@@ -89,6 +89,7 @@ export function FriendRequests({
                     color="slate"
                     size="sm"
                     name={r.otherUser.username}
+                    src={r.otherUser.avatarUrl}
                   />
                 </button>
                 <span className={styles.rowName} title={r.otherUser.username}>
@@ -154,6 +155,7 @@ export function FriendRequests({
                     color="slate"
                     size="sm"
                     name={r.otherUser.username}
+                    src={r.otherUser.avatarUrl}
                   />
                 </button>
                 <span className={styles.rowName} title={r.otherUser.username}>

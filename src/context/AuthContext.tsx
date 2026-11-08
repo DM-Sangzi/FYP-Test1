@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   login as apiLogin,
@@ -6,6 +6,7 @@ import {
   logout as apiLogout,
   cancelLoginChallenge,
   setAuthToken,
+  updateAvatar as apiUpdateAvatar,
   verifyTwoFactorLogin,
 } from '../api/client';
 import type { PublicUser } from '../types';
@@ -45,6 +46,11 @@ interface AuthContextValue {
     email: string,
     password: string,
   ) => Promise<{ success: boolean; error?: string }>;
+  /** Replaces (dataUrl) or removes (null) the signed-in account's own photo
+   *  via the API. Resolves true once the confirmed result was applied;
+   *  false when the session changed mid-request (stale response discarded).
+   *  Throws on API failure — callers must surface it, never fake success. */
+  updateAvatar: (dataUrl: string | null) => Promise<boolean>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -66,6 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [pendingChallenge, setPendingChallenge] = useState<PendingChallenge | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* Mirrors of the session identity, updated synchronously with the state
+   * above. In-flight requests compare against them after resolving so a
+   * late response from a logged-out or freshly re-logged session (same
+   * account included) can never paint stale user state. */
+  const tokenRef = useRef<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
   const login = useCallback(
     async (identifier: string, password: string) => {
@@ -82,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setToken(result.token);
         setUser(result.user);
+        tokenRef.current = result.token;
+        userIdRef.current = result.user.id;
         // Share the in-memory token with the API client so friend/search
         // endpoints can identify the caller (mock identity marking).
         setAuthToken(result.token);
@@ -108,6 +122,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPendingChallenge(null);
       setToken(session.token);
       setUser(session.user);
+      tokenRef.current = session.token;
+      userIdRef.current = session.user.id;
       setAuthToken(session.token);
       return true;
     } catch (err) {
@@ -155,11 +171,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const updateAvatar = useCallback(async (dataUrl: string | null): Promise<boolean> => {
+    const sessionToken = tokenRef.current;
+    const accountId = userIdRef.current;
+    if (!sessionToken || !accountId) return false;
+    const updated = await apiUpdateAvatar(dataUrl === null ? { remove: true } : { dataUrl });
+    // Apply only when this is still the same session and account the
+    // request was made with; otherwise the response is dropped.
+    if (tokenRef.current !== sessionToken || userIdRef.current !== accountId) return false;
+    if (updated.id !== accountId) return false;
+    setUser(updated);
+    return true;
+  }, []);
+
   const logout = useCallback(async () => {
     await apiLogout();
     setAuthToken(null);
     setToken(null);
     setUser(null);
+    tokenRef.current = null;
+    userIdRef.current = null;
     setPendingChallenge(null);
     setError(null);
   }, []);
@@ -178,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyTwoFactor,
       cancelChallenge,
       register,
+      updateAvatar,
       logout,
       clearError,
     }),
@@ -191,6 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyTwoFactor,
       cancelChallenge,
       register,
+      updateAvatar,
       logout,
       clearError,
     ],

@@ -310,8 +310,8 @@ export function cancelFriendRequest(userId: string, requestId: string): void {
 /** Received and sent requests (pending first-class, accepted kept so the UI
  *  can show the resulting Friends + Message state where the row was). */
 export function listFriendRequests(userId: string): {
-  received: { id: string; status: FriendRequestStatus; createdAt: string; otherUser: { id: string; username: string } }[];
-  sent: { id: string; status: FriendRequestStatus; createdAt: string; otherUser: { id: string; username: string } }[];
+  received: { id: string; status: FriendRequestStatus; createdAt: string; otherUser: { id: string; username: string; avatarUrl?: string } }[];
+  sent: { id: string; status: FriendRequestStatus; createdAt: string; otherUser: { id: string; username: string; avatarUrl?: string } }[];
 } {
   const data = readSocial();
   const users = readUsers();
@@ -322,7 +322,7 @@ export function listFriendRequests(userId: string): {
       id: r.id,
       status: r.status,
       createdAt: r.createdAt,
-      otherUser: { id: other.id, username: other.username },
+      otherUser: { id: other.id, username: other.username, avatarUrl: other.avatar },
     };
   };
   const received = data.requests
@@ -345,6 +345,7 @@ export function listFriends(userId: string): {
   userId: string;
   username: string;
   friendsSince: string;
+  avatarUrl?: string;
 }[] {
   const data = readSocial();
   const users = readUsers();
@@ -354,7 +355,13 @@ export function listFriends(userId: string): {
       const otherId = f.userAId === userId ? f.userBId : f.userAId;
       const other = users.find((u) => u.id === otherId);
       if (!other) return null; // defensive: skip orphans (account removed manually)
-      return { friendshipId: f.id, userId: other.id, username: other.username, friendsSince: f.createdAt };
+      return {
+        friendshipId: f.id,
+        userId: other.id,
+        username: other.username,
+        friendsSince: f.createdAt,
+        avatarUrl: other.avatar,
+      };
     })
     .filter((v): v is NonNullable<typeof v> => v !== null)
     .sort((a, b) => a.username.localeCompare(b.username));

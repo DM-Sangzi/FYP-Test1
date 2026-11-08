@@ -102,6 +102,20 @@ export async function logout(): Promise<{ success: true }> {
 }
 
 /* ------------------------------------------------------------------ */
+/* Own profile photo                                                   */
+/* ------------------------------------------------------------------ */
+
+/** Exactly one of the two avatar operations — the mock API rejects any
+ *  other body shape, including both fields at once. */
+export type AvatarUpdateInput = { dataUrl: string } | { remove: true };
+
+/** Replaces or removes the signed-in account's own photo. Resolves to the
+ *  updated PublicUser after the mock store confirmed persistence. */
+export async function updateAvatar(input: AvatarUpdateInput): Promise<PublicUser> {
+  return post<PublicUser>('/api/auth/avatar', input, true);
+}
+
+/* ------------------------------------------------------------------ */
 /* Two-factor authentication                                           */
 /* ------------------------------------------------------------------ */
 

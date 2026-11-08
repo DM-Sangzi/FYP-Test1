@@ -37,7 +37,11 @@ interface SidebarProps {
   /** Called on mobile when a conversation is chosen (to switch panes). */
   onNavigateToChat?: () => void;
   /** Signed-in user for the bottom profile row (mock auth). */
-  currentUser?: { username: string };
+  currentUser?: { username: string; avatarUrl?: string };
+  /** Conversation id → the peer's avatar, resolved by the parent from the
+   *  shared social data (stable participant user IDs only). A missing entry
+   *  or value — seed conversations included — falls back to initials. */
+  conversationAvatars?: Record<string, string | undefined>;
   /** Opens the read-only contact profile for a conversation. The opener
    * element is reported so focus can return to it on close. */
   onOpenProfile: (conversationId: string, opener: HTMLElement) => void;
@@ -75,6 +79,7 @@ export function Sidebar({
   loading,
   onNavigateToChat,
   currentUser,
+  conversationAvatars,
   onOpenProfile,
   friends,
   requests,
@@ -243,6 +248,7 @@ export function Sidebar({
                         color={c.color}
                         name={c.name}
                         online={c.status === 'online'}
+                        src={conversationAvatars?.[c.id]}
                       />
                     </button>
                     {/* Everything else keeps the original selection behaviour. */}
@@ -360,6 +366,7 @@ export function Sidebar({
                               username: f.username,
                               kind: 'account',
                               relationship: { state: 'friends' },
+                              avatarUrl: f.avatarUrl,
                             }}
                             busy={busy}
                             onOpenPersonProfile={onOpenPersonProfile}
@@ -410,6 +417,7 @@ export function Sidebar({
             color="teal"
             size="md"
             name={currentUser.username}
+            src={currentUser.avatarUrl}
           />
           <div className={styles.userMeta}>
             <span className={styles.userName} title={currentUser.username}>
@@ -474,6 +482,7 @@ function PersonRow({
           color="slate"
           size="sm"
           name={person.username}
+          src={person.avatarUrl}
         />
       </button>
       <span className={styles.peopleName} title={person.username}>

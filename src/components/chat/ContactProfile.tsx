@@ -17,6 +17,9 @@ export interface ProfileTarget {
   /** Only set when the username is reliably known (account ids, never
    *  name-guessed from a display name). */
   username?: string;
+  /** The account's public avatar, only via the same stable-id social data
+   *  as the username; absent = initials. */
+  avatarUrl?: string;
   about?: string;
   /** Only set when presence data actually exists (seed conversations). */
   online?: boolean;
@@ -133,6 +136,7 @@ export function ContactProfile({
               color={target.color}
               size="xl"
               name={target.displayName}
+              src={target.avatarUrl}
             />
             <div className={styles.identityInfo}>
               <p className={styles.displayName}>{target.displayName}</p>

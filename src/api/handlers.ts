@@ -64,8 +64,20 @@ import {
 
 const BASE = '/api';
 
+/* Profile photo limits — must match the client-side processor in
+ * utils/avatarImage.ts. Stored as JPEG data URLs, so the persisted size is
+ * bounded by the decoded cap. */
+const AVATAR_DATAURL_PREFIX = 'data:image/jpeg;base64,';
+const AVATAR_MAX_BYTES = 150 * 1024;
+// ceil(150 KiB × 4/3) plus the prefix, rounded up for padding.
+const AVATAR_MAX_DATAURL_CHARS = AVATAR_DATAURL_PREFIX.length + 204_800;
+
 function stripPrivate(u: User): PublicUser {
-  return { id: u.id, username: u.username, email: u.email };
+  // Whitelist serialization: the password, the 2FA secret and recovery
+  // hashes never leave this module, avatar or not.
+  const pub: PublicUser = { id: u.id, username: u.username, email: u.email };
+  if (u.avatar !== undefined) pub.avatarUrl = u.avatar;
+  return pub;
 }
 
 function makeToken(user: PublicUser): string {
@@ -343,6 +355,105 @@ export const handlers = [
   http.post(`${BASE}/auth/logout`, async () => {
     await delay(120);
     return HttpResponse.json({ success: true }, { status: 200 });
+  }),
+
+  // POST /api/auth/avatar — replaces or removes the CALLER's own profile
+  // photo. The body must be exactly { dataUrl } or { remove: true }; both,
+  // neither, wrong types or malformed data are rejected. Only the avatar
+  // field changes — password, 2FA and every other field are preserved —
+  // and the response is the updated public user after persistence.
+  http.post(`${BASE}/auth/avatar`, async ({ request }) => {
+    await delay(150);
+    const caller = getCaller(request);
+    if (!caller) return unauthorized();
+
+    const body: unknown = await request.json().catch(() => null);
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+      return HttpResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    }
+    const record = body as Record<string, unknown>;
+    const keys = Object.keys(record).sort();
+    const wantsRemove = keys.length === 1 && keys[0] === 'remove';
+    const wantsDataUrl = keys.length === 1 && keys[0] === 'dataUrl';
+    if (!wantsRemove && !wantsDataUrl) {
+      return HttpResponse.json(
+        { error: 'Send exactly one of: dataUrl, or remove.' },
+        { status: 400 },
+      );
+    }
+
+    let nextAvatar: string | undefined;
+    if (wantsRemove) {
+      if (record.remove !== true) {
+        return HttpResponse.json({ error: 'remove must be true.' }, { status: 400 });
+      }
+      // Idempotent: removing when there is no photo still succeeds.
+      nextAvatar = undefined;
+    } else {
+      const dataUrl = record.dataUrl;
+      if (typeof dataUrl !== 'string' || !dataUrl.startsWith(AVATAR_DATAURL_PREFIX)) {
+        return HttpResponse.json(
+          { error: 'dataUrl must be a JPEG data URL produced by the app.' },
+          { status: 400 },
+        );
+      }
+      // Bound the string before decoding anything.
+      if (dataUrl.length > AVATAR_MAX_DATAURL_CHARS) {
+        return HttpResponse.json({ error: 'That photo is too large.' }, { status: 400 });
+      }
+      const base64 = dataUrl.slice(AVATAR_DATAURL_PREFIX.length);
+      if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
+        return HttpResponse.json({ error: 'The photo data is malformed.' }, { status: 400 });
+      }
+      let bytes: Uint8Array<ArrayBuffer>;
+      try {
+        const bin = atob(base64);
+        bytes = new Uint8Array(new ArrayBuffer(bin.length));
+        for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+      } catch {
+        return HttpResponse.json({ error: 'The photo data is malformed.' }, { status: 400 });
+      }
+      if (bytes.byteLength === 0) {
+        return HttpResponse.json({ error: 'The photo data is empty.' }, { status: 400 });
+      }
+      if (bytes.byteLength > AVATAR_MAX_BYTES) {
+        return HttpResponse.json({ error: 'That photo is too large.' }, { status: 400 });
+      }
+      // Real decode: signatures or sizes alone never count as verification.
+      // The photo must decode and be exactly the 256×256 the client makes.
+      let bitmap: ImageBitmap;
+      try {
+        bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/jpeg' }));
+      } catch {
+        return HttpResponse.json({ error: 'That photo could not be decoded.' }, { status: 400 });
+      }
+      try {
+        if (bitmap.width !== 256 || bitmap.height !== 256) {
+          return HttpResponse.json(
+            { error: 'That photo has the wrong dimensions.' },
+            { status: 400 },
+          );
+        }
+      } finally {
+        bitmap.close();
+      }
+
+      nextAvatar = dataUrl;
+    }
+
+    try {
+      const users = readUsers();
+      const user = users.find((u) => u.id === caller.id);
+      if (!user) return unauthorized();
+      if (nextAvatar === undefined) delete user.avatar;
+      else user.avatar = nextAvatar;
+      writeUsers(users);
+      return HttpResponse.json(stripPrivate(user), { status: 200 });
+    } catch (err) {
+      const res = storeErrorResponse(err);
+      if (res) return res;
+      throw err;
+    }
   }),
 
   /* ------------------------------------------------------------------ */
@@ -671,8 +782,11 @@ export const handlers = [
       }
 
       // Two-factor fully removed; an in-progress enrollment cannot exist
-      // while enabled (start refuses), so nothing else survives.
-      const kept = { id: user.id, username: user.username, email: user.email, password: user.password, createdAt: user.createdAt };
+      // while enabled (start refuses), so nothing else survives. Copy the
+      // record and delete only the 2FA field — every other field (avatar
+      // included) is preserved.
+      const kept: User = { ...user };
+      delete kept.twoFactor;
       const nextUsers = users.map((u) => (u.id === user.id ? kept : u));
       writeUsers(nextUsers);
       clearSensitiveFailures(caller.id);
@@ -794,6 +908,7 @@ export const handlers = [
           username: u.username,
           kind: 'account' as const,
           relationship: relationshipBetween(caller.id, u.id),
+          avatarUrl: u.avatar,
         }));
 
       // Display-level dedupe: skip a sample entry whose username collides
