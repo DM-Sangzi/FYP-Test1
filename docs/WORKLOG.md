@@ -347,3 +347,46 @@
 - **事件**：dev server 檔案監看再次失效（日誌宣稱 HMR 已更新、transform
   快取未失效，伺服舊模組）→ 重啟解決；背景 dev server 曾無預警結束
   （exit 1、日誌無錯誤）→ 重啟接續。
+
+## 10. 個人頭像與對方頭像顯示（2026-11-08）
+
+> 經使用者批准後實作（15 檔＝新增 3＋修改 12；再批准擴充 ChatHeader／
+> 聊天列表 3 檔）。備份：`Desktop\PQPM_FYP-main_backup_avatar_2026-11-08`
+> （119 檔，實作前）與 `Desktop\PQPM_FYP-main_backup_avatar_chat_2026-11-08`
+> （124 檔，含未提交頭像變更），皆 SHA-256 逐檔比對 0 差異。零新增依賴。
+
+- **圖片處理**（`utils/avatarImage.ts`）：真實解碼（createImageBitmap）＋
+  MIME／空檔／2 MiB／64–4096px 檢查，中央裁切 256×256，JPEG 品質遞減
+  重編碼至 ≤150 KiB；ImageBitmap 必釋放；僅接受 JPEG／PNG／WebP。
+- **Mock API**（`POST /api/auth/avatar`）：body 嚴格二擇一（`{dataUrl}` 或
+  `{remove:true}`，鍵集恰一）、先限長度→base64→大小→**SW 內真實解碼**驗
+  256×256（偽造 JPEG 標記被攔）；僅改 caller 的 avatar 欄位；remove 冪等；
+  `stripPrivate` 白名單擴充 `avatarUrl`（password／twoFactor／recovery
+  hashes 永不外洩）。
+- **相容修正**：2FA disable 由固定五欄位重建改為複製後只刪 `twoFactor`——
+  實測停用 2FA 後頭像／password／createdAt 全保留。search／friends／
+  friend-requests 回應經穩定 user ID join 出 `avatarUrl`，不以姓名猜測。
+- **AuthContext**：新增 `updateAvatar` 經 tokenRef／userIdRef 防污染——
+  登出或重新登入（含同帳戶）後的舊回應一律捨棄、不套用。
+- **顯示範圍**：Settings 編輯器（單一預覽位置、Preview — not saved yet、
+  選擇與移除均須 Save 才生效、處理期間停用衝突按鈕、選圖序號＋unmount
+  守衛）、Sidebar footer、搜尋／Friends／Friend requests／Contact Profile
+  （participantIds／social data 穩定 ID），以及第二階段批准的 ChatHeader 與
+  聊天列表——三處共用 `peerAvatarUrl()` 同一解析規則；seed 對話無可靠 ID
+  一律 initials。
+- **驗證**：typecheck／lint／build 全過；UI 全流程＋7 種檔案錯誤案例
+  （GIF/SVG/空檔/3 MiB/32×32/4500×4500/損壞）＋API 負面測試（401、XOR
+  body、壞 base64、偽造 JPEG、尺寸 300×300）＋保存失敗模擬（無假成功、
+  可重試）＋A/B 帳戶隔離＋2FA 啟用／停用相容（頁內 RFC 6238 計碼實測）
+  ＋壞圖 onError fallback（注入後還原無污染）＋跨分頁「不即時」行為證實
+  ＋375px／明暗主題／鍵盤焦點／草稿保留全過。截圖：未保存預覽、保存成功、
+  移除後、Friends／Contact Profile 對方頭像、ChatHeader/列表對方頭像、
+  375px。
+- **聲明**：頭像為 localStorage data URL（≤150 KiB／帳戶；`pqpm_users` 每次
+  寫入序列化全部帳戶，容量無固定保證、寫入失敗如實報錯）；跨分頁**不**
+  即時同步（對方寫 `pqpm_users` 無 storage event，需重載／重登／social
+  action 重抓）；正式後端應另行設計影像儲存與 URL。
+- **事件**：使用者 Chrome 端 `pqpm_social_v1` 報損壞——診斷為開發期中間
+  版本舊 schema（`schemaVersion`＋`conversations` 欄位，2026-11-07 寫入），
+  store 依設計拒寫不覆寫；由使用者在 Console 最小修復（`schemaVersion`→
+  `version`），邀請資料全保留。IAB 端資料一直有效，App 全程正常。
